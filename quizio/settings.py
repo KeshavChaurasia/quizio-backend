@@ -40,7 +40,9 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "drf_yasg",  # Ensure drf_yasg is listed here
+    "channels",
     "quiz",
+    "challenges",
 ]
 
 MIDDLEWARE = [
@@ -140,3 +142,4 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = "your-email@example.com"
 EMAIL_HOST_PASSWORD = "your-email-password"
 DEFAULT_FROM_EMAIL = "your-email@example.com"
+ASGI_APPLICATION = 'quizio.asgi.application'

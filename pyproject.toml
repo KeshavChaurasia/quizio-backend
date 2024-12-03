@@ -13,6 +13,8 @@ markdown = "^3.7"
 django-filter = "^24.3"
 djangorestframework-simplejwt = "^5.3.1"
 drf-yasg = "^1.21.8"
+channels = "^4.2.0"
+uvicorn = {extras = ["standard"], version = "^0.32.1"}
 
 
 [tool.poetry.group.dev.dependencies]
