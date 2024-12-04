@@ -31,15 +31,23 @@ class ChallengeConsumer(AsyncWebsocketConsumer):
         # Explicitly fetch the current_question (this will be an ORM query)
         return challenge.current_question
 
+    @sync_to_async
+    def getattr_async(self, attribute):
+        return getattr(self, attribute)
+
     async def connect(self):
         """Handle WebSocket connection."""
-        self.challenge_token = self.scope["url_route"]["kwargs"]["challenge_token"]
+        self.challenge_token = self.scope["url_route"]["kwargs"][
+            "challenge_token"
+        ]
         try:
             self.challenge = await sync_to_async(Challenge.objects.get)(
                 join_token=self.challenge_token
             )
         except Challenge.DoesNotExist:
-            logger.error(f"Challenge with token {self.challenge_token} not found.")
+            logger.error(
+                f"Challenge with token {self.challenge_token} not found."
+            )
             await self.close()
             return
 
@@ -52,11 +60,15 @@ class ChallengeConsumer(AsyncWebsocketConsumer):
             # For anonymous users, prompt for a username
             if not self.user:
                 self.username = (
-                    self.scope.get("query_string", "").decode().split("username=")[-1]
+                    self.scope.get("query_string", "")
+                    .decode()
+                    .split("username=")[-1]
                 )
                 if not self.username:
                     self.username = f"Anonymous_{datetime.utcnow().timestamp()}"
-                self.participant = await self.add_user_to_challenge(self.username)
+                self.participant = await self.add_user_to_challenge(
+                    self.username
+                )
             else:
                 self.participant = await self.add_user_to_challenge()
 
@@ -66,13 +78,17 @@ class ChallengeConsumer(AsyncWebsocketConsumer):
             await self.log_event(
                 "user_joined",
                 metadata={
-                    "username": self.username if not self.user else self.user.username
+                    "username": self.username
+                    if not self.user
+                    else self.user.username
                 },
             )
 
             # Handle active challenge state
             if self.challenge.status == "active":
-                self.current_question = await self.get_current_question(self.challenge)
+                self.current_question = await self.get_current_question(
+                    self.challenge
+                )
                 await self.start_timer(self.current_question.time_limit)
         else:
             await self.close()
@@ -83,13 +99,17 @@ class ChallengeConsumer(AsyncWebsocketConsumer):
             await self.remove_user_from_challenge()
             await self.log_event(
                 "user_left",
-                metadata={"username": self.user.username if self.user else "anonymous"},
+                metadata={
+                    "username": self.user.username if self.user else "anonymous"
+                },
             )
 
     async def authenticate_user(self, token):
         """Authenticate user using JWT token."""
         try:
-            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+            payload = jwt.decode(
+                token, settings.SECRET_KEY, algorithms=["HS256"]
+            )
             if datetime.utcfromtimestamp(payload["exp"]) < datetime.utcnow():
                 raise jwt.ExpiredSignatureError
             user_id = payload["user_id"]
@@ -104,7 +124,9 @@ class ChallengeConsumer(AsyncWebsocketConsumer):
 
     async def add_user_to_challenge(self, username=None):
         """Add user to the challenge."""
-        participant = await sync_to_async(ChallengeParticipant.objects.get_or_create)(
+        participant = await sync_to_async(
+            ChallengeParticipant.objects.get_or_create
+        )(
             challenge=self.challenge,
             user=self.user if self.user else None,
             username=username
@@ -146,7 +168,9 @@ class ChallengeConsumer(AsyncWebsocketConsumer):
         await self.store_answer(
             self.participant, self.challenge.current_question, selected_answers
         )
-        await self.log_event("answer_submitted", metadata={"answers": selected_answers})
+        await self.log_event(
+            "answer_submitted", metadata={"answers": selected_answers}
+        )
 
         if await self.check_all_answered():
             await self.end_question()
@@ -154,7 +178,9 @@ class ChallengeConsumer(AsyncWebsocketConsumer):
     @sync_to_async
     def check_all_answered(self):
         """Check if all participants have answered the current question."""
-        participants = ChallengeParticipant.objects.filter(challenge=self.challenge)
+        participants = ChallengeParticipant.objects.filter(
+            challenge=self.challenge
+        )
         submissions = AnswerSubmission.objects.filter(
             question=self.challenge.current_question,
             participant__in=participants,
@@ -163,7 +189,9 @@ class ChallengeConsumer(AsyncWebsocketConsumer):
 
     def calculate_points(self, challenge_question, submission_time):
         """Calculate points based on time taken to answer."""
-        time_taken = (submission_time - challenge_question.time_started).total_seconds()
+        time_taken = (
+            submission_time - challenge_question.time_started
+        ).total_seconds()
         base_points = 100
         penalty_per_second = 5
         return max(base_points - penalty_per_second * time_taken, 0)
@@ -210,7 +238,10 @@ class ChallengeConsumer(AsyncWebsocketConsumer):
     async def end_question(self):
         """Handle the end of the question."""
         correct_answers = sync_to_async(Answer.objects.filter)(
-            question=self.current_question.question, is_correct=True
+            question=await self.getattr_async(
+                self.current_question, "question"
+            ),
+            is_correct=True,
         ).values_list("id", flat=True)
 
         await self.send_message(

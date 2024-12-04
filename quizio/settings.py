@@ -40,7 +40,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "rest_framework_simplejwt",
-    "drf_yasg",  # Ensure drf_yasg is listed here
+    "drf_yasg", 
+    "corsheaders",
     "channels",
     "quiz",
     "challenges",
@@ -54,6 +55,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+        'corsheaders.middleware.CorsMiddleware',
 ]
 
 ROOT_URLCONF = "quizio.urls"
@@ -152,3 +154,6 @@ CHANNEL_LAYERS = {
         "BACKEND": "channels.layers.InMemoryChannelLayer",  # In-memory backend for testing
     },
 }
+
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True

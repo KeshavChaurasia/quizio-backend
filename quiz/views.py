@@ -207,22 +207,3 @@ class TakeQuizView(APIView):
             },
             status=201,
         )
-
-
-class QuizQuestionsView(APIView):
-    permission_classes = []  # Allow all users to access the endpoint
-
-    def get(self, request, quiz_id):
-        try:
-            quiz = Quiz.objects.get(id=quiz_id)
-        except Quiz.DoesNotExist:
-            return Response(
-                {"error": "Quiz not found"}, status=status.HTTP_404_NOT_FOUND
-            )
-
-        questions = (
-            quiz.questions.all()
-        )  # Assuming a `questions` related_name in the Quiz model
-        serializer = QuestionSerializer(questions, many=True)
-
-        return Response(serializer.data, status=status.HTTP_200_OK)
