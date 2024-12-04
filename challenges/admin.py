@@ -68,7 +68,7 @@ class AnswerSubmissionAdmin(admin.ModelAdmin):
     """
     # list_display = ('participant', 'question', 'selected_answers', 'submitted_at')
     list_filter = ('participant', 'submitted_at')
-    search_fields = ('question__question_text')
+    search_fields = ('question__question_text',)
     readonly_fields = ('submitted_at',)
 
 

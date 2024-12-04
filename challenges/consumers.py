@@ -1,3 +1,6 @@
+
+# TODO: Convert all sync calls to async database calls
+# eg. self.challenge.current_question -> await self.get_current_question(self.challenge)
 import asyncio
 import json
 import logging
@@ -25,22 +28,17 @@ logger = logging.getLogger(__name__)
 
 class ChallengeConsumer(AsyncWebsocketConsumer):
     """WebSocket Consumer for managing real-time challenge functionality."""
-
+    @sync_to_async
+    def get_current_question(self, challenge):
+        # Explicitly fetch the current_question (this will be an ORM query)
+        return challenge.current_question
     async def connect(self):
         """Handle WebSocket connection."""
-        logger.error("Incoming WebSocket connection.")
-        self.challenge_token = self.scope["url_route"]["kwargs"][
-            "challenge_token"
-        ]
-        logger.error("Current token: %s", self.challenge_token)
+        self.challenge_token = self.scope["url_route"]["kwargs"]["challenge_token"]
         try:
-            self.challenge = await sync_to_async(Challenge.objects.get)(
-                join_token=self.challenge_token
-            )
+            self.challenge = await sync_to_async(Challenge.objects.get)(join_token=self.challenge_token)
         except Challenge.DoesNotExist:
-            logger.error(
-                f"Challenge with token {self.challenge_token} not found."
-            )
+            logger.error(f"Challenge with token {self.challenge_token} not found.")
             await self.close()
             return
 
@@ -49,25 +47,25 @@ class ChallengeConsumer(AsyncWebsocketConsumer):
 
         if self.user or not token:  # Allow anonymous participants
             self.room_group_name = f"challenge_{self.challenge_token}"
-            self.participant = await self.add_user_to_challenge()
+
+            # For anonymous users, prompt for a username
+            if not self.user:
+                self.username = self.scope.get("query_string", "").decode().split("username=")[-1]
+                if not self.username:
+                    self.username = f"Anonymous_{datetime.utcnow().timestamp()}"
+                self.participant = await self.add_user_to_challenge(self.username)
+            else:
+                self.participant = await self.add_user_to_challenge()
+
             await self.accept()
 
             # Log event
-            await self.log_event(
-                "user_joined",
-                metadata={
-                    "username": self.user.username if self.user else "anonymous"
-                },
-            )
+            await self.log_event("user_joined", metadata={"username": self.username if not self.user else self.user.username})
 
             # Handle active challenge state
-            if (
-                self.challenge.status == "active"
-                and self.challenge.current_question
-            ):
-                await self.start_timer(
-                    self.challenge.current_question.time_limit
-                )
+            if self.challenge.status == "active":
+                self.current_question = await self.get_current_question(self.challenge)
+                await self.start_timer(self.current_question.time_limit)
         else:
             await self.close()
 
@@ -100,20 +98,19 @@ class ChallengeConsumer(AsyncWebsocketConsumer):
             logger.warning("Invalid or expired token.")
             return None
 
-    @sync_to_async
-    def add_user_to_challenge(self):
+    async def add_user_to_challenge(self, username=None):
         """Add user to the challenge."""
-        return ChallengeParticipant.objects.get_or_create(
+        participant = await sync_to_async(ChallengeParticipant.objects.get_or_create)(
             challenge=self.challenge,
-            user=self.user,
-        )[0]
+            user=self.user if self.user else None,
+            username=username if not self.user else None,  # Only set username for anonymous users
+        )
+        return participant[0]
 
     @sync_to_async
     def remove_user_from_challenge(self):
         """Remove user from the challenge."""
-        ChallengeParticipant.objects.filter(
-            challenge=self.challenge, user=self.user
-        ).delete()
+        ChallengeParticipant.objects.filter(challenge=self.challenge, user=self.user, username=self.username).delete()
 
     async def receive(self, text_data):
         """Handle WebSocket messages."""
@@ -207,11 +204,11 @@ class ChallengeConsumer(AsyncWebsocketConsumer):
                 await asyncio.sleep(1)
 
         await self.end_question()
-
+    
     async def end_question(self):
         """Handle the end of the question."""
-        correct_answers = Answer.objects.filter(
-            question=self.challenge.current_question.question, is_correct=True
+        correct_answers = sync_to_async(Answer.objects.filter)(
+            question=self.current_question.question, is_correct=True
         ).values_list("id", flat=True)
 
         await self.send_message(

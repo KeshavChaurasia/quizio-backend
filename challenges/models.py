@@ -105,6 +105,7 @@ class ChallengeParticipant(models.Model):
         null=True,
         blank=True,
     )
+    username = models.CharField(max_length=255, blank=True, null=True)
     challenge = models.ForeignKey(
         Challenge, on_delete=models.CASCADE, related_name="participants"
     )
@@ -116,7 +117,7 @@ class ChallengeParticipant(models.Model):
     score = models.IntegerField(default=0, null=True, blank=True)
     rejoined_at = models.DateTimeField(null=True, blank=True)  # Optional
     def __str__(self):
-        return f"Participant: {self.user.username} in {self.challenge.title}"
+        return f"Participant: {self.user}"
 
 
 class Round(models.Model):
