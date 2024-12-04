@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 from datetime import datetime
@@ -7,12 +8,15 @@ from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.utils.timezone import now
 
+from quiz.models import Answer
 from .models import (
     AnswerSubmission,
     Challenge,
     ChallengeParticipant,
     ChallengeQuestion,
+    ChallengeEvent,
     Round,
 )
 
@@ -20,142 +24,238 @@ logger = logging.getLogger(__name__)
 
 
 class ChallengeConsumer(AsyncWebsocketConsumer):
-    """
-    WebSocket Consumer to handle the challenge-related real-time functionality.
-    """
+    """WebSocket Consumer for managing real-time challenge functionality."""
 
     async def connect(self):
-        # Extract the challenge token from the URL
+        """Handle WebSocket connection."""
+        logger.error("Incoming WebSocket connection.")
         self.challenge_token = self.scope["url_route"]["kwargs"][
             "challenge_token"
         ]
+        logger.error("Current token: %s", self.challenge_token)
         try:
             self.challenge = await sync_to_async(Challenge.objects.get)(
                 join_token=self.challenge_token
             )
         except Challenge.DoesNotExist:
-            print(f"Challenge with token {self.challenge_token} not found.")
+            logger.error(
+                f"Challenge with token {self.challenge_token} not found."
+            )
             await self.close()
             return
-        # Get the token from the query string in the WebSocket URL
 
-        token = self.scope["query_string"].decode()
-        if token:
-            try:
-                token = token.split("=")[1]  # e.g., token=your-jwt-token-here
-                # Decode and validate the token
-                payload = jwt.decode(
-                    token, settings.SECRET_KEY, algorithms=["HS256"]
-                )
+        token = self.scope["query_string"].decode().split("=", 1)[-1]
+        self.user = await self.authenticate_user(token)
 
-                # Check if the token has expired
-                if (
-                    datetime.utcfromtimestamp(payload["exp"])
-                    < datetime.utcnow()
-                ):
-                    raise jwt.ExpiredSignatureError
-
-                # Get the user ID from the token
-                user_id = payload["user_id"]
-                self.user = await sync_to_async(get_user_model().objects.get)(
-                    id=user_id
-                )
-
-                # Ensure the user is authenticated
-                if self.user.is_authenticated:
-                    # Proceed with the WebSocket connection for authenticated user
-                    self.room_group_name = f"challenge_{self.challenge_token}"
-                    await self.add_user_to_challenge()
-
-                    # Accept the WebSocket connection
-                    await self.accept()
-                else:
-                    # Reject connection if the user is not authenticated
-                    await self.close()
-            except jwt.ExpiredSignatureError:
-                print("Token has expired.")
-                await self.close()
-            except jwt.InvalidTokenError:
-                print("Invalid token.")
-                await self.close()
-            except IndexError:
-                print("No token provided.")
-                await self.close()
-        else:
-            # If the token is not provided, handle the anonymous user (they can still join)
-            self.user = None  # Set the user to None for anonymous users
+        if self.user or not token:  # Allow anonymous participants
             self.room_group_name = f"challenge_{self.challenge_token}"
-            await self.add_user_to_challenge()
-
-            # Accept the WebSocket connection
+            self.participant = await self.add_user_to_challenge()
             await self.accept()
 
-    async def disconnect(self, close_code):
-        """Handle disconnection."""
-        if hasattr(self, "user") and self.user:
-            # Remove the user from the challenge when they disconnect
-            await self.remove_user_from_challenge()
+            # Log event
+            await self.log_event(
+                "user_joined",
+                metadata={
+                    "username": self.user.username if self.user else "anonymous"
+                },
+            )
 
-    async def receive(self, text_data):
-        """Handle messages received from WebSocket."""
-        try:
-            text_data_json = json.loads(text_data)
-        except json.JSONDecodeError:
-            logger.warning("Invalid JSON data received.")
-        action = text_data_json["action"]
-
-        if action == "answer_submission":
-            question_id = text_data_json["question_id"]
-            selected_answers = text_data_json["selected_answers"]
-
-            # Process the answer submission
-            await self.process_answer_submission(question_id, selected_answers)
-
-        elif action == "leave_challenge":
-            # Handle participant leaving the challenge
-            await self.remove_user_from_challenge()
+            # Handle active challenge state
+            if (
+                self.challenge.status == "active"
+                and self.challenge.current_question
+            ):
+                await self.start_timer(
+                    self.challenge.current_question.time_limit
+                )
+        else:
             await self.close()
 
-    # Add user to the challenge (anonymous or logged in)
+    async def disconnect(self, close_code):
+        """Handle WebSocket disconnection."""
+        if hasattr(self, "participant"):
+            await self.remove_user_from_challenge()
+            await self.log_event(
+                "user_left",
+                metadata={
+                    "username": self.user.username if self.user else "anonymous"
+                },
+            )
+
+    async def authenticate_user(self, token):
+        """Authenticate user using JWT token."""
+        try:
+            payload = jwt.decode(
+                token, settings.SECRET_KEY, algorithms=["HS256"]
+            )
+            if datetime.utcfromtimestamp(payload["exp"]) < datetime.utcnow():
+                raise jwt.ExpiredSignatureError
+            user_id = payload["user_id"]
+            return await sync_to_async(get_user_model().objects.get)(id=user_id)
+        except (
+            jwt.ExpiredSignatureError,
+            jwt.InvalidTokenError,
+            get_user_model().DoesNotExist,
+        ):
+            logger.warning("Invalid or expired token.")
+            return None
+
     @sync_to_async
     def add_user_to_challenge(self):
-        if self.user:
-            # If the user is logged in, associate them with their user record
-            participant, created = ChallengeParticipant.objects.get_or_create(
-                challenge=self.challenge, user=self.user
-            )
-        else:
-            # If the user is anonymous, associate them with an anonymous participant
-            participant, created = ChallengeParticipant.objects.get_or_create(
-                challenge=self.challenge,
-                user=None,  # Anonymous user does not have a user record
-            )
-        return participant
+        """Add user to the challenge."""
+        return ChallengeParticipant.objects.get_or_create(
+            challenge=self.challenge,
+            user=self.user,
+        )[0]
 
-    # Remove user from the challenge
     @sync_to_async
     def remove_user_from_challenge(self):
+        """Remove user from the challenge."""
         ChallengeParticipant.objects.filter(
             challenge=self.challenge, user=self.user
         ).delete()
 
-    # Process the answer submission
-    @sync_to_async
-    def process_answer_submission(self, question_id, selected_answers):
-        question = ChallengeQuestion.objects.get(id=question_id)
-        correct_answers = question.correct_answers.split(",")
+    async def receive(self, text_data):
+        """Handle WebSocket messages."""
+        try:
+            data = json.loads(text_data)
+            action = data.get("action")
+        except json.JSONDecodeError:
+            logger.warning("Invalid JSON data received.")
+            return
 
-        # Check if the submitted answers match the correct answers
-        correct = set(selected_answers) == set(correct_answers)
+        if action == "answer_submission":
+            await self.handle_answer_submission(data)
+        elif action == "leave_challenge":
+            await self.disconnect(close_code=1000)
+        else:
+            logger.warning(f"Unhandled action: {action}")
 
-        # Store the answer submission
-        AnswerSubmission.objects.create(
-            participant=self.user,
-            question=question,
-            selected_answers=",".join(selected_answers),
-            is_correct=correct,
+    async def handle_answer_submission(self, data):
+        """Process answer submission."""
+        selected_answers = data.get("selected_answers", [])
+        if not selected_answers:
+            logger.warning("No answers provided.")
+            return
+
+        await self.store_answer(
+            self.participant, self.challenge.current_question, selected_answers
+        )
+        await self.log_event(
+            "answer_submitted", metadata={"answers": selected_answers}
         )
 
-    # Send a message to WebSocket (for broadcasting updates like the correct answer)
+        if await self.check_all_answered():
+            await self.end_question()
+
+    @sync_to_async
+    def check_all_answered(self):
+        """Check if all participants have answered the current question."""
+        participants = ChallengeParticipant.objects.filter(
+            challenge=self.challenge
+        )
+        submissions = AnswerSubmission.objects.filter(
+            question=self.challenge.current_question,
+            participant__in=participants,
+        )
+        return submissions.count() == participants.count()
+
+    def calculate_points(self, challenge_question, submission_time):
+        """Calculate points based on time taken to answer."""
+        time_taken = (
+            submission_time - challenge_question.time_started
+        ).total_seconds()
+        base_points = 100
+        penalty_per_second = 5
+        return max(base_points - penalty_per_second * time_taken, 0)
+
+    @sync_to_async
+    def store_answer(self, participant, challenge_question, selected_answers):
+        """Store the participant's answer and calculate points."""
+        correct_answers = Answer.objects.filter(
+            question=challenge_question.question, is_correct=True
+        ).values_list("id", flat=True)
+
+        is_correct = set(map(int, selected_answers)) == set(correct_answers)
+        submission_time = now()
+        points = (
+            self.calculate_points(challenge_question, submission_time)
+            if is_correct
+            else 0
+        )
+
+        AnswerSubmission.objects.create(
+            participant=participant,
+            question=challenge_question,
+            answer=",".join(map(str, selected_answers)),
+            is_correct=is_correct,
+            submitted_at=submission_time,
+            time_taken=(
+                submission_time - challenge_question.time_started
+            ).total_seconds(),
+        )
+        participant.score += points
+        participant.save()
+
+    async def start_timer(self, time_limit):
+        """Start a countdown timer for the current question."""
+        for remaining_time in range(time_limit, -1, -1):
+            await self.send_message(
+                {"type": "timer_update", "remaining_time": remaining_time}
+            )
+            if remaining_time > 0:
+                await asyncio.sleep(1)
+
+        await self.end_question()
+
+    async def end_question(self):
+        """Handle the end of the question."""
+        correct_answers = Answer.objects.filter(
+            question=self.challenge.current_question.question, is_correct=True
+        ).values_list("id", flat=True)
+
+        await self.send_message(
+            {
+                "type": "question_end",
+                "correct_answers": list(correct_answers),
+                "message": "Time is up!",
+            }
+        )
+        await self.log_event(
+            "question_end", metadata={"correct_answers": list(correct_answers)}
+        )
+
+        await sync_to_async(self.challenge.next_question)()
+        if self.challenge.status == "active":
+            await self.send_message(
+                {
+                    "type": "new_question",
+                    "question": {
+                        "id": self.challenge.current_question.id,
+                        "text": self.challenge.current_question.question.question_text,
+                        "time_limit": self.challenge.current_question.time_limit,
+                    },
+                }
+            )
+            await self.start_timer(self.challenge.current_question.time_limit)
+
     async def send_message(self, message):
-        await self.send(text_data=json.dumps(message))
+        """Send a JSON message to the WebSocket."""
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {"type": "send_to_websocket", "message": json.dumps(message)},
+        )
+
+    async def send_to_websocket(self, event):
+        """Send a message to the WebSocket."""
+        await self.send(text_data=event["message"])
+
+    @sync_to_async
+    def log_event(self, event_type, metadata=None):
+        """Log an event to the database."""
+        ChallengeEvent.objects.create(
+            challenge=self.challenge,
+            participant=self.participant if self.user else None,
+            event_type=event_type,
+            metadata=metadata,
+        )
