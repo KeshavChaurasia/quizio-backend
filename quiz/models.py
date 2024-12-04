@@ -79,7 +79,11 @@ class Answer(models.Model):
 
 class QuizAttempt(models.Model):
     user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="quiz_attempts"
+        User,
+        on_delete=models.CASCADE,
+        related_name="quiz_attempts",
+        null=True,  # Allow null values
+        blank=True,  # Allow blank values in forms
     )
     quiz = models.ForeignKey("Quiz", on_delete=models.CASCADE, related_name="attempts")
     score = models.PositiveIntegerField()
@@ -87,4 +91,6 @@ class QuizAttempt(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.user.username} - {self.quiz.title} - {self.score}/{self.total_questions}"
+        if self.user:
+            return f"{self.user.username} - {self.quiz.title} - {self.score}/{self.total_questions}"
+        return f"Anonymous - {self.quiz.title} - {self.score}/{self.total_questions}"

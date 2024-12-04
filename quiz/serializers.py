@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Profile, QuizAttempt
+from .models import Answer, Profile, Question, QuizAttempt
 
 
 class ProfileSerializer(serializers.ModelSerializer):
@@ -15,6 +15,20 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["id", "username", "email", "profile"]
+
+
+class AnswerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Answer
+        fields = "__all__"  # Exclude `is_correct` if answers should be hidden
+
+
+class QuestionSerializer(serializers.ModelSerializer):
+    answers = AnswerSerializer(many=True)  # Include related answers
+
+    class Meta:
+        model = Question
+        fields = "__all__"
 
 
 class QuizAttemptSerializer(serializers.ModelSerializer):

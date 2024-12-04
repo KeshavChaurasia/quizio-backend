@@ -39,9 +39,7 @@ schema_view = get_schema_view(
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include("quiz.urls")),
-    path(
-        "challenge/", include("challenges.urls")
-    ),  # Link trivia app's URLs here
+    path("challenge/", include("challenges.urls")),  # Link trivia app's URLs here
     path(
         "swagger/",
         schema_view.with_ui("swagger", cache_timeout=0),
@@ -59,6 +57,4 @@ urlpatterns = [
     ),
 ]
 if settings.DEBUG:
-    urlpatterns += static(
-        settings.STATIC_URL, document_root=settings.STATIC_ROOT
-    )
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

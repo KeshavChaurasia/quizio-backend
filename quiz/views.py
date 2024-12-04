@@ -1,7 +1,6 @@
-# Create your views here.
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.hashers import make_password
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AnonymousUser, User
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.core.mail import send_mail
 from django.utils.encoding import force_bytes
@@ -15,6 +14,7 @@ from rest_framework.views import APIView
 from quiz.models import Quiz, QuizAttempt
 from quiz.serializers import (
     ProfileSerializer,
+    QuestionSerializer,
     QuizAttemptSerializer,
     UserSerializer,
 )
@@ -136,9 +136,32 @@ def forgot_password(request):
 
 
 class TakeQuizView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = []  # Allow all users (including anonymous users)
+
+    def get(self, request, quiz_id):
+        """
+        Retrieve all questions for the specified quiz.
+        """
+        try:
+            quiz = Quiz.objects.get(id=quiz_id)
+        except Quiz.DoesNotExist:
+            return Response({"error": "Quiz not found"}, status=404)
+
+        # Get all questions related to the quiz
+        questions = (
+            quiz.questions.all()
+        )  # Assuming a related_name="questions" in Quiz model
+        question_serializer = QuestionSerializer(questions, many=True)
+
+        return Response(
+            {"quiz_title": quiz.title, "questions": question_serializer.data},
+            status=200,
+        )
 
     def post(self, request, quiz_id):
+        """
+        Handle quiz submissions by calculating the score.
+        """
         user = request.user
         try:
             quiz = Quiz.objects.get(id=quiz_id)
@@ -163,13 +186,43 @@ class TakeQuizView(APIView):
             if correct_answers == user_answers:
                 score += 1
 
+        # Handle anonymous and authenticated users
+        if isinstance(user, AnonymousUser):
+            user = None  # Assign None for anonymous users
+
         # Save quiz attempt
         quiz_attempt = QuizAttempt.objects.create(
-            user=user,
+            user=user,  # Will be None for anonymous users
             quiz=quiz,
             score=score,
             total_questions=total_questions,
         )
 
-        serializer = QuizAttemptSerializer(quiz_attempt)
-        return Response(serializer.data, status=201)
+        attempt_serializer = QuizAttemptSerializer(quiz_attempt)
+
+        return Response(
+            {
+                "quiz_attempt": attempt_serializer.data,
+                "questions": QuestionSerializer(questions, many=True).data,
+            },
+            status=201,
+        )
+
+
+class QuizQuestionsView(APIView):
+    permission_classes = []  # Allow all users to access the endpoint
+
+    def get(self, request, quiz_id):
+        try:
+            quiz = Quiz.objects.get(id=quiz_id)
+        except Quiz.DoesNotExist:
+            return Response(
+                {"error": "Quiz not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        questions = (
+            quiz.questions.all()
+        )  # Assuming a `questions` related_name in the Quiz model
+        serializer = QuestionSerializer(questions, many=True)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)

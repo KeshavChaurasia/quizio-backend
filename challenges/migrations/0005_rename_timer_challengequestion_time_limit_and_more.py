@@ -5,51 +5,92 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('challenges', '0004_challenge_current_question_challenge_current_round_and_more'),
+        (
+            "challenges",
+            "0004_challenge_current_question_challenge_current_round_and_more",
+        ),
     ]
 
     operations = [
         migrations.RenameField(
-            model_name='challengequestion',
-            old_name='timer',
-            new_name='time_limit',
+            model_name="challengequestion",
+            old_name="timer",
+            new_name="time_limit",
         ),
         migrations.AddField(
-            model_name='answersubmission',
-            name='time_taken',
+            model_name="answersubmission",
+            name="time_taken",
             field=models.FloatField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='challengeparticipant',
-            name='rejoined_at',
+            model_name="challengeparticipant",
+            name="rejoined_at",
             field=models.DateTimeField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='challengeparticipant',
-            name='score',
+            model_name="challengeparticipant",
+            name="score",
             field=models.IntegerField(blank=True, default=0, null=True),
         ),
         migrations.AddField(
-            model_name='challengequestion',
-            name='time_ended',
+            model_name="challengequestion",
+            name="time_ended",
             field=models.DateTimeField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='challengequestion',
-            name='time_started',
+            model_name="challengequestion",
+            name="time_started",
             field=models.DateTimeField(auto_now_add=True, null=True),
         ),
         migrations.CreateModel(
-            name='ChallengeEvent',
+            name="ChallengeEvent",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('event_type', models.CharField(choices=[('challenge_started', 'Challenge Started'), ('challenge_completed', 'Challenge Completed'), ('user_joined', 'User Joined'), ('user_left', 'User Left'), ('question_asked', 'Question Asked'), ('answer_submitted', 'Answer Submitted'), ('round_started', 'Round Started'), ('round_completed', 'Round Completed')], max_length=50)),
-                ('timestamp', models.DateTimeField(auto_now_add=True)),
-                ('metadata', models.JSONField(blank=True, null=True)),
-                ('challenge', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='events', to='challenges.challenge')),
-                ('participant', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='events', to='challenges.challengeparticipant')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "event_type",
+                    models.CharField(
+                        choices=[
+                            ("challenge_started", "Challenge Started"),
+                            ("challenge_completed", "Challenge Completed"),
+                            ("user_joined", "User Joined"),
+                            ("user_left", "User Left"),
+                            ("question_asked", "Question Asked"),
+                            ("answer_submitted", "Answer Submitted"),
+                            ("round_started", "Round Started"),
+                            ("round_completed", "Round Completed"),
+                        ],
+                        max_length=50,
+                    ),
+                ),
+                ("timestamp", models.DateTimeField(auto_now_add=True)),
+                ("metadata", models.JSONField(blank=True, null=True)),
+                (
+                    "challenge",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="events",
+                        to="challenges.challenge",
+                    ),
+                ),
+                (
+                    "participant",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="events",
+                        to="challenges.challengeparticipant",
+                    ),
+                ),
             ],
         ),
     ]

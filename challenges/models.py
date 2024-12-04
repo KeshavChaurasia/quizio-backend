@@ -27,9 +27,7 @@ class Challenge(models.Model):
         User, on_delete=models.CASCADE, related_name="hosted_challenges"
     )
     join_token = models.UUIDField(default=uuid.uuid4, editable=False)
-    status = models.CharField(
-        max_length=10, choices=STATUS_CHOICES, default="pending"
-    )
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="pending")
     current_round = models.IntegerField(null=True, blank=True)
     current_question = models.ForeignKey(
         "ChallengeQuestion",
@@ -80,9 +78,7 @@ class Challenge(models.Model):
         if self.current_round < len(rounds):
             # Move to the next round
             self.current_round += 1
-            self.current_question = (
-                None  # Reset current question for the new round
-            )
+            self.current_question = None  # Reset current question for the new round
             self.save()
         else:
             # No more rounds, mark the challenge as completed
@@ -116,6 +112,7 @@ class ChallengeParticipant(models.Model):
     )  # To track if the user left the challenge
     score = models.IntegerField(default=0, null=True, blank=True)
     rejoined_at = models.DateTimeField(null=True, blank=True)  # Optional
+
     def __str__(self):
         return f"Participant: {self.user}"
 
@@ -148,9 +145,7 @@ class ChallengeQuestion(models.Model):
     time_ended = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
-        return (
-            f"Question {self.question.id} in Challenge: {self.challenge.title}"
-        )
+        return f"Question {self.question.id} in Challenge: {self.challenge.title}"
 
 
 class AnswerSubmission(models.Model):
@@ -161,14 +156,13 @@ class AnswerSubmission(models.Model):
         ChallengeQuestion, on_delete=models.CASCADE, related_name="submissions"
     )
     answer = models.TextField()  # Stores the submitted answer
-    is_correct = models.BooleanField(
-        null=True, blank=True
-    )  # Marked after validation
+    is_correct = models.BooleanField(null=True, blank=True)  # Marked after validation
     submitted_at = models.DateTimeField(auto_now_add=True)
     time_taken = models.FloatField(null=True, blank=True)
 
     def __str__(self):
         return f"Answer by {self.participant.user.username} for {self.question.question.id}"
+
 
 class ChallengeEvent(models.Model):
     EVENT_TYPE_CHOICES = [

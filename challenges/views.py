@@ -15,7 +15,6 @@ from .models import (
 )
 from .serializers import (
     ChallengeSerializer,
-    ChallengeParticipantSerializer,
     RoundSerializer,
     ChallengeQuestionSerializer,
     AnswerSubmissionSerializer,
@@ -64,9 +63,7 @@ class ChallengeViewSet(viewsets.ModelViewSet):
         user = request.user
 
         # Check if the user is already a participant
-        if ChallengeParticipant.objects.filter(
-            challenge=challenge, user=user
-        ).exists():
+        if ChallengeParticipant.objects.filter(challenge=challenge, user=user).exists():
             return Response(
                 {"detail": "You are already a participant in this challenge."},
                 status=400,
@@ -134,12 +131,8 @@ class ChallengeJoinView(APIView):
             )
 
         # Add the user as a participant
-        ChallengeParticipant.objects.create(
-            challenge=challenge, user=request.user
-        )
-        return Response(
-            {"detail": "Successfully joined the challenge!"}, status=201
-        )
+        ChallengeParticipant.objects.create(challenge=challenge, user=request.user)
+        return Response({"detail": "Successfully joined the challenge!"}, status=201)
 
 
 class ChallengeQuestionViewSet(viewsets.ModelViewSet):
@@ -153,9 +146,7 @@ class ChallengeQuestionViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         # Restrict questions to those in challenges hosted by the current user
-        return ChallengeQuestion.objects.filter(
-            challenge__host=self.request.user
-        )
+        return ChallengeQuestion.objects.filter(challenge__host=self.request.user)
 
 
 class AnswerSubmissionViewSet(viewsets.ModelViewSet):
@@ -175,9 +166,7 @@ class AnswerSubmissionViewSet(viewsets.ModelViewSet):
         )
         if not participant.active:
             return Response(
-                {
-                    "detail": "You are not allowed to submit answers for this challenge."
-                },
+                {"detail": "You are not allowed to submit answers for this challenge."},
                 status=403,
             )
 
