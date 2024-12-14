@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "drf_yasg",
     "corsheaders",
     "channels",
+    "users",
     "ai_quiz",
 ]
 

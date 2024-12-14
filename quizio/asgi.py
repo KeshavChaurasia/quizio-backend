@@ -7,11 +7,9 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "quizio.settings")
 from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
-from django.urls import path
 
 asgi_application = get_asgi_application()
-# ASGI application
-from challenges import consumers  # Import the consumer you will create
+# ASGI application # Import the consumer you will create
 
 application = ProtocolTypeRouter(
     {
@@ -20,11 +18,7 @@ application = ProtocolTypeRouter(
             URLRouter(
                 {
                     # Add WebSocket URL routing here
-                    # Example route for challenge WebSocket communication
-                    path(
-                        "ws/challenge/<uuid:challenge_token>/",
-                        consumers.ChallengeConsumer.as_asgi(),
-                    ),
+                    # Example route for challenge WebSocket communication]
                 }
             )
         ),

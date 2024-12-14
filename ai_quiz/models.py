@@ -1,41 +1,7 @@
 from django.db import models
-from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
-import uuid
 
-
-# Custom User model to include roles (host only)
-class User(AbstractUser):
-    ROLE_CHOICES = [
-        ("host", "Host"),
-    ]
-    groups = models.ManyToManyField(
-        "auth.Group",
-        related_name="ai_quiz_user_set",  # Change the related_name here
-        blank=True,
-        help_text="The groups this user belongs to.",
-    )
-    user_permissions = models.ManyToManyField(
-        "auth.Permission",
-        related_name="ai_quiz_user_permissions_set",  # Change the related_name here
-        blank=True,
-        help_text="Specific permissions for this user.",
-    )
-    role = models.CharField(max_length=6, choices=ROLE_CHOICES, default="host")
-
-    def __str__(self):
-        return self.username
-
-
-# GuestUser model for unregistered users
-class GuestUser(models.Model):
-    userId = models.CharField(max_length=255, unique=True, default=uuid.uuid4)
-    userName = models.CharField(max_length=255)
-    room = models.ForeignKey("Room", on_delete=models.CASCADE, related_name="guests")
-    score = models.IntegerField(default=0)
-
-    def __str__(self):
-        return self.userName
+from users.models import GuestUser, User
 
 
 # Room model to manage room creation, and the host relationship
