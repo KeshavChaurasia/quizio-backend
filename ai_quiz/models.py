@@ -1,7 +1,9 @@
 from django.db import models
 from django.utils import timezone
+from django.contrib.auth import get_user_model
+from users.models import GuestUser
 
-from users.models import GuestUser, User
+User = get_user_model()
 
 
 # Room model to manage room creation, and the host relationship

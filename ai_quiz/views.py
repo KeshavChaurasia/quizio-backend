@@ -1,13 +1,15 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from ai_quiz.models import Room
 import qrcode
 from io import BytesIO
 import base64
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import TokenAuthentication
+
+User = get_user_model()
 
 
 # Utility function to generate QR code in base64
@@ -24,9 +26,6 @@ class CreateRoomView(APIView):
     permission_classes = [
         IsAuthenticated
     ]  # Ensure only authenticated users can create a room
-    authentication_classes = [
-        TokenAuthentication
-    ]  # Use Token Authentication for user authentication
 
     def post(self, request, *args, **kwargs):
         """Handle room creation by the host."""
@@ -39,7 +38,9 @@ class CreateRoomView(APIView):
 
         # Use the authenticated user as the host
         user = request.user  # This will be the logged-in host
-
+        print("*****************************")
+        print("user", user, type(user))
+        print("*****************************")
         # Create a new room for the host
         room_id = str(
             Room.objects.count() + 1
