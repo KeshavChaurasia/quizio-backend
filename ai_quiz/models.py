@@ -14,7 +14,7 @@ class Room(models.Model):
         ("ended", "Ended"),
     ]
 
-    roomId = models.CharField(max_length=255, unique=True)
+    room_id = models.CharField(max_length=255, unique=True)
     host = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="hosted_rooms"
     )

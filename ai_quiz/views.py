@@ -38,9 +38,7 @@ class CreateRoomView(APIView):
 
         # Use the authenticated user as the host
         user = request.user  # This will be the logged-in host
-        print("*****************************")
-        print("user", user, type(user))
-        print("*****************************")
+
         # Create a new room for the host
         room_id = str(
             Room.objects.count() + 1
@@ -61,7 +59,7 @@ class CreateRoomView(APIView):
                 "userName": user.username,
                 "role": "host",
             },
-            "ws": f"wss://example.com/rooms/{room_id}?token={user.auth_token.key}",  # WebSocket URL with token
+            "ws": f"wss://example.com/rooms/{room_id}",  # WebSocket URL with token
         }
 
         return Response(response_data, status=status.HTTP_201_CREATED)
