@@ -43,8 +43,7 @@ INSTALLED_APPS = [
     "drf_yasg",
     "corsheaders",
     "channels",
-    "quiz",
-    "challenges",
+    "ai_quiz",
 ]
 
 MIDDLEWARE = [

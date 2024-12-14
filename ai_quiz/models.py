@@ -9,6 +9,18 @@ class User(AbstractUser):
     ROLE_CHOICES = [
         ("host", "Host"),
     ]
+    groups = models.ManyToManyField(
+        "auth.Group",
+        related_name="ai_quiz_user_set",  # Change the related_name here
+        blank=True,
+        help_text="The groups this user belongs to.",
+    )
+    user_permissions = models.ManyToManyField(
+        "auth.Permission",
+        related_name="ai_quiz_user_permissions_set",  # Change the related_name here
+        blank=True,
+        help_text="Specific permissions for this user.",
+    )
     role = models.CharField(max_length=6, choices=ROLE_CHOICES, default="host")
 
     def __str__(self):
