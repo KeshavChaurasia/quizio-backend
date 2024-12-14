@@ -1,6 +1,6 @@
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.hashers import make_password
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.core.mail import send_mail
 from django.utils.encoding import force_bytes
@@ -14,6 +14,8 @@ from users.serializers import (
     ProfileSerializer,
     UserSerializer,
 )
+
+User = get_user_model()
 
 
 @api_view(["POST"])
