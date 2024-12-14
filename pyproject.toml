@@ -17,6 +17,7 @@ channels = "^4.2.0"
 uvicorn = {extras = ["standard"], version = "^0.32.1"}
 django-cors-headers = "^4.6.0"
 pre-commit = "^4.0.1"
+qrcode = "^8.0"
 
 
 [tool.poetry.group.dev.dependencies]
