@@ -1,15 +1,26 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
+import uuid
 
 
-# Custom User model to include roles (host or player)
+# Custom User model to include roles (host only)
 class User(AbstractUser):
     ROLE_CHOICES = [
         ("host", "Host"),
-        ("player", "Player"),
     ]
-    role = models.CharField(max_length=6, choices=ROLE_CHOICES, default="player")
+    role = models.CharField(max_length=6, choices=ROLE_CHOICES, default="host")
+
+    def __str__(self):
+        return self.username
+
+
+# GuestUser model for unregistered users
+class GuestUser(models.Model):
+    userId = models.CharField(max_length=255, unique=True, default=uuid.uuid4)
+    userName = models.CharField(max_length=255)
+    room = models.ForeignKey("Room", on_delete=models.CASCADE, related_name="guests")
+    score = models.IntegerField(default=0)
 
     def __str__(self):
         return self.userName
@@ -35,20 +46,6 @@ class Room(models.Model):
         return f"Room {self.roomId} - {self.status}"
 
 
-# Participant model to track players in the room
-class Participant(models.Model):
-    user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="participants"
-    )
-    room = models.ForeignKey(
-        Room, on_delete=models.CASCADE, related_name="participants"
-    )
-    score = models.IntegerField(default=0)
-
-    def __str__(self):
-        return f"{self.user.username} - Score: {self.score}"
-
-
 # Question model to define the trivia questions for each room
 class Question(models.Model):
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name="questions")
@@ -67,13 +64,22 @@ class Answer(models.Model):
     question = models.ForeignKey(
         Question, on_delete=models.CASCADE, related_name="answers"
     )
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="answers")
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="answers", null=True, blank=True
+    )
+    guest_user = models.ForeignKey(
+        GuestUser,
+        on_delete=models.CASCADE,
+        related_name="answers",
+        null=True,
+        blank=True,
+    )
     answer = models.CharField(max_length=512)
     is_correct = models.BooleanField(default=False)
     submitted_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
-        return f"Answer by {self.user.username} to {self.question.text} - Correct: {self.is_correct}"
+        return f"Answer by {self.user.username if self.user else self.guest_user.userName} to {self.question.text} - Correct: {self.is_correct}"
 
     def save(self, *args, **kwargs):
         # Automatically determine if the answer is correct
