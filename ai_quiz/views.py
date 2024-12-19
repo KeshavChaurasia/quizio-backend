@@ -116,10 +116,10 @@ class JoinRoomView(APIView):
             participant = Participant.objects.create(guest_user=user, room=room)
         # Construct the response data for the participant
         response_data = {
-            "user_id": user.id,
+            "userId": user.id,
             "username": user.username,
-            "room_id": room.room_id,
-            "room_code": room.room_code,
+            "roomId": room.room_id,
+            "roomCode": room.room_code,
             "role": "participant",
             "ws": f"/rooms/{room_code}",
         }
