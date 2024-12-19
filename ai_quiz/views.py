@@ -76,7 +76,7 @@ class CreateRoomView(APIView):
 class JoinRoomView(APIView):
     def post(self, request, *args, **kwargs):
         """Allow a participant to join the room."""
-        room_code = request.data.get("room_code")
+        room_code = request.data.get("roomCode")
         username = request.data.get("username")
 
         if not room_code or not username:
