@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 import os
 from pathlib import Path
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -41,6 +42,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "drf_yasg",
+    "django_extensions",
     "corsheaders",
     "channels",
     "users",
@@ -140,6 +142,20 @@ REST_FRAMEWORK = {
     ),
 }
 
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(
+        hours=1
+    ),  # Set access token lifetime to 1 hour (default is 5 minutes)
+    "REFRESH_TOKEN_LIFETIME": timedelta(
+        days=7
+    ),  # Set refresh token lifetime to 7 days (default is 30 days)
+    "ROTATE_REFRESH_TOKENS": True,  # Rotate refresh tokens to avoid reusing the same refresh token multiple times
+    "BLACKLIST_AFTER_ROTATION": True,  # Blacklist the old refresh token after rotation
+    "ALGORITHM": "HS256",
+    "SIGNING_KEY": "your-secret-key",  # Use your own secret key
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.example.com"

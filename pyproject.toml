@@ -19,12 +19,17 @@ django-cors-headers = "^4.6.0"
 pre-commit = "^4.0.1"
 qrcode = "^8.0"
 pillow = "^11.0.0"
+langchain = "^0.3.12"
+langchain-aws = "^0.2.9"
+langchain-openai = "^0.2.12"
+django-extensions = "^3.2.3"
 
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.8.1"
 ipdb = "^0.13.13"
 mypy = "^1.13.0"
+ipykernel = "^6.29.5"
 
 [tool.ruff]
 exclude = [".venv"]
