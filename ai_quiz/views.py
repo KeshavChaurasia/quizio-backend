@@ -37,10 +37,19 @@ class CreateRoomView(APIView):
         room = Room.objects.filter(host=user)
         if room.exists():
             room = room.first()
-            return Response(
-                {"error": f"Host already has an active room: {room.room_code}"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            qr_code = generate_qr_code(room.room_code)
+            response_data = {
+                "roomId": room.room_id,
+                "roomCode": room.room_code,
+                "qrCode": qr_code,
+                "host": {
+                    "userId": f"host-{user.id}",
+                    "userName": user.username,
+                    "role": "host",
+                },
+                "ws": f"/rooms/{room.room_code}",  # WebSocket URL with token
+            }
+            return Response(response_data, status=status.HTTP_200_OK)
         # Create a new room for the host
         room = Room.objects.create(host=user)
 
@@ -51,7 +60,7 @@ class CreateRoomView(APIView):
         # Construct the response data
         response_data = {
             "roomId": room.room_id,
-            "joinLink": room_code,
+            "roomCode": room_code,
             "qrCode": qr_code,
             "host": {
                 "userId": f"host-{user.id}",
