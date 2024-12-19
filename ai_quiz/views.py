@@ -132,11 +132,11 @@ class StartGameView(APIView):
 
     def post(self, request, *args, **kwargs):
         """Start the game."""
-        room_code = request.data.get("room_code")
+        room_code = request.data.get("roomCode")
 
         if not room_code:
             return Response(
-                {"error": "room_code is required"},
+                {"error": "roomCode is required"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -168,7 +168,7 @@ class StartGameView(APIView):
 
         response_data = {
             "status": "game_started",
-            "game_id": game.id,
+            "gameId": game.id,
         }
         return Response(response_data, status=status.HTTP_200_OK)
 
@@ -178,11 +178,11 @@ class EndGameView(APIView):
 
     def post(self, request, *args, **kwargs):
         """End the game."""
-        room_code = request.data.get("room_code")
-        game_id = request.data.get("game_id")
+        room_code = request.data.get("roomCode")
+        game_id = request.data.get("gameId")
         if not room_code or not game_id:
             return Response(
-                {"error": "room_code and game_id required"},
+                {"error": "roomCode and gameId required"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
