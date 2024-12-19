@@ -10,7 +10,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import Q
 from rest_framework_simplejwt.tokens import UntypedToken
 
-from ai_quiz.models import Game, Participant
+from ai_quiz.models import Game, Participant, Room
 
 
 class RoomConsumer(AsyncWebsocketConsumer):
@@ -35,6 +35,7 @@ class RoomConsumer(AsyncWebsocketConsumer):
         event_type = data["type"]
         if event_type == "player_ready":
             await self.handle_player_ready(data)
+            await self.send_all_player_names()
         elif event_type == "player_waiting":
             await self.handle_player_waiting(data)
         elif event_type == "next_question":
@@ -46,6 +47,25 @@ class RoomConsumer(AsyncWebsocketConsumer):
         else:
             raise ValueError("Invalid event type")
         # message = data["message"]
+
+    @sync_to_async
+    def get_all_participants(self):
+        room = Room.objects.filter(room_code=self.room_code)
+        if room.exists():
+            participants = room.first().participants.all()
+            return [p.user.username for p in participants if p.user] + [
+                p.guest_user.username for p in participants if p.guest_user
+            ]
+
+    async def send_all_player_names(self):
+        usernames = await self.get_all_participants()
+        await self.channel_layer.group_send(
+            self.room_code,
+            {
+                "type": "room_message",
+                "event": {"type": "all_players", "usernames": usernames},
+            },
+        )
 
     @database_sync_to_async
     def get_next_question(self):
