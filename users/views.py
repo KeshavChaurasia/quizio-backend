@@ -15,6 +15,7 @@ from users.serializers import (
     ProfileSerializer,
     UserSerializer,
 )
+from django.core.exceptions import ValidationError
 
 User = get_user_model()
 

@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 import uuid
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
 
 
 class User(AbstractUser):
@@ -9,6 +11,21 @@ class User(AbstractUser):
     ]
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     role = models.CharField(max_length=6, choices=ROLE_CHOICES, default="host")
+    email = models.EmailField(unique=True)
+
+    def clean(self):
+        super().clean()
+        if self.email:
+            try:
+                validate_email(self.email)  # Explicitly validate the email
+            except ValidationError:
+                # Raise a single, custom error for invalid email
+                raise ValidationError(f"Invalid email: {self.email}")
+
+    def save(self, *args, **kwargs):
+        # Ensure clean() is called before saving
+        self.full_clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"User: {self.username}"
