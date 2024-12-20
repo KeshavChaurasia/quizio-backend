@@ -140,25 +140,24 @@ async def generate_subtopics(topic: str) -> TopicGenerator:
 
 
 async def generate_questions(
-    topic: str, n_questions: int, difficulty: str
+    topic: str, subtopics: list[str], n_questions: int, difficulty: str
 ) -> tuple[TriviaGenerator, TopicGenerator]:
-    subtopics = await generate_subtopics(topic)
     quiz_chain = (QUESTION_GENERATOR_PROMPT | QUESTION_LLM) | YamlOutputParser(
         pydantic_object=TriviaGenerator
     )
     # Shuffle the subtopics randomly for variety
-    random.shuffle(subtopics.subtopics)
+    random.shuffle(subtopics)
     logger.info(f"Generating {n_questions} questions for topic: {topic}")
     questions = await quiz_chain.ainvoke(
         {
             "topic": topic,
-            "subtopics": subtopics.subtopics,
+            "subtopics": subtopics,
             "n": n_questions,
             "difficulty": difficulty,
         }
     )
     logger.info(f"Generated {n_questions} questions: {questions.questions}")
-    return questions, subtopics
+    return questions
 
 
 if __name__ == "__main__":

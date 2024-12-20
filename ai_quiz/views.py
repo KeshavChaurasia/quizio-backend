@@ -167,22 +167,37 @@ class CreateGameView(AsyncAPIView):
     async def create_game(self, room, topic, n, difficulty):
         """Create a new game object associated with the room."""
         game = await Game.objects.acreate(room=room)
+        subtopics = await generate_subtopics(topic)
         questions = await self._fetch_and_create_questions(
-            game=game, topic=topic, n=n, difficulty=difficulty
+            game=game,
+            topic=topic,
+            subtopics=subtopics.subtopics,
+            n=n,
+            difficulty=difficulty,
         )
         return game.id
 
     async def _get_or_create_topic(self, topic, subtopics):
         """Get or create a topic object with the given subtopics."""
         topic, _ = await Topic.objects.aget_or_create(name=topic)
-        topic.subtopics = list(set(subtopics.subtopics)) + list(set(topic.subtopics))
+        topic.subtopics = list(set(subtopics)) + list(set(topic.subtopics))
         await topic.asave()
         return topic
 
-    async def _fetch_and_create_questions(self, game, topic, n, difficulty):
+    async def _fetch_and_create_questions(
+        self,
+        game: Game,
+        topic: str,
+        subtopics: list[str],
+        n: int,
+        difficulty: str,
+    ):
         """Fetch questions from the AI backend and create question objects."""
-        questions, subtopics = await generate_questions(
-            topic=topic, n_questions=n, difficulty=difficulty
+        questions = await generate_questions(
+            topic=topic,
+            subtopics=subtopics,
+            n_questions=n,
+            difficulty=difficulty,
         )
         questions = await Question.objects.abulk_create(
             [
@@ -208,11 +223,14 @@ class CreateGameView(AsyncAPIView):
     async def post(self, request, *args, **kwargs):
         room_code = request.data.get("roomCode")
         topic = request.data.get("topic")
+        subtopics = request.data.get("subtopics")
         n = request.data.get("n", 5)
         difficulty = request.data.get("difficulty", "easy")
-        if not topic:
+        if not topic or not subtopics:
             return Response(
-                {"error": "`topic` is required; `n` and `difficulty` are optional."},
+                {
+                    "error": "`topic` and `subtopics` are required; `n` and `difficulty` are optional."
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
         if not room_code:
