@@ -6,7 +6,7 @@ from ai_quiz.models import Question
 class QuestionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Question
-        fields = ["question", "options", "timer"]
+        fields = ["question", "options", "timer", "id"]
 
 
 class CreateRoomSerializer(serializers.Serializer):

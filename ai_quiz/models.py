@@ -92,9 +92,8 @@ class Game(models.Model):
 
     def create_leaderboard(self):
         print("Creating leaderboard")
-        self.leaderboard, _ = Leaderboard.objects.get_or_create(game=self)
-        print(self.leaderboard)
-        return self.leaderboard
+        leaderboard = Leaderboard.objects.get_or_create(game=self)
+        return leaderboard
 
 
 class Participant(models.Model):
