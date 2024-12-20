@@ -9,7 +9,8 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-
+from rest_framework_simplejwt.views import TokenObtainPairView
+from .serializers import CustomTokenObtainPairSerializer
 from users.serializers import (
     ProfileSerializer,
     UserSerializer,
@@ -20,6 +21,7 @@ User = get_user_model()
 
 @api_view(["POST"])
 def register_user(request):
+    """Responsible for registering a new user"""
     data = request.data
     try:
         if User.objects.filter(username=data["username"]).exists():
@@ -48,6 +50,7 @@ def register_user(request):
 @api_view(["GET", "PUT"])
 @permission_classes([IsAuthenticated])
 def user_profile(request):
+    """Responsible for getting and updating the user profile"""
     user = request.user
     if request.method == "GET":
         serializer = UserSerializer(user)
@@ -66,6 +69,7 @@ def user_profile(request):
 @api_view(["PUT"])
 @permission_classes([IsAuthenticated])
 def change_password(request):
+    """Responsible for changing the user's password"""
     user = request.user
     data = request.data
     if not user.check_password(data["old_password"]):
@@ -93,6 +97,8 @@ token_generator = PasswordResetTokenGenerator()
 
 @api_view(["POST"])
 def forgot_password(request):
+    """Responsible for sending a password reset email.
+    TODO: Implement the mail sending logic; it doesn't work yet."""
     data = request.data
     try:
         user = User.objects.get(email=data["email"])
@@ -114,3 +120,7 @@ def forgot_password(request):
             {"error": "No user with this email exists"},
             status=status.HTTP_404_NOT_FOUND,
         )
+
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
