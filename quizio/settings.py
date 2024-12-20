@@ -22,6 +22,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
+# TODO: Change the secret key in production
 SECRET_KEY = "django-insecure-k)9fc-o3tbsoy59yzq6yeehcv&^^4v=05#v09g4-om%nd=vask"
 
 # SECURITY WARNING: don't run with debug turned on in production!
@@ -83,7 +84,7 @@ WSGI_APPLICATION = "quizio.wsgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
+# TODO: Change the database settings to postgres in production
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
@@ -142,10 +143,10 @@ REST_FRAMEWORK = {
     ),
 }
 
-
+# TODO: Change the token lifetime and refresh token lifetime
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(
-        hours=1
+        hours=24
     ),  # Set access token lifetime to 1 hour (default is 5 minutes)
     "REFRESH_TOKEN_LIFETIME": timedelta(
         days=7
@@ -157,6 +158,7 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
+# TODO: Change the email settings
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.example.com"
 EMAIL_PORT = 587
@@ -166,9 +168,13 @@ EMAIL_HOST_PASSWORD = "your-email-password"
 DEFAULT_FROM_EMAIL = "your-email@example.com"
 ASGI_APPLICATION = "quizio.asgi.application"
 
+
 CHANNEL_LAYERS = {
     "default": {
-        "BACKEND": "channels.layers.InMemoryChannelLayer",  # In-memory backend for testing
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],  # Redis server location
+        },
     },
 }
 

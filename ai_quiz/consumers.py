@@ -13,12 +13,8 @@ from ai_quiz.serializers import QuestionSerializer
 
 
 class RoomConsumer(AsyncWebsocketConsumer):
-    active_users = defaultdict(dict)
-
     async def connect(self):
         self.room_code = self.scope["url_route"]["kwargs"]["room_code"]
-
-        RoomConsumer.active_users[self.room_code] = {}
 
         await self.channel_layer.group_add(self.room_code, self.channel_name)
         await self.accept()
