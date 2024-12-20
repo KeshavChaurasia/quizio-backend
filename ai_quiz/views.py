@@ -11,7 +11,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
+from django.utils import timezone
 from ai_quiz.ai import generate_questions, generate_subtopics
 from ai_quiz.models import Game, GuestUser, Participant, Question, Room, Topic
 from ai_quiz.serializers import (
@@ -107,16 +107,17 @@ class JoinRoomView(APIView):
 
         if not room_code or not username:
             return Response(
-                {"error": "roomId and username are required"},
+                {"error": "roomCode and username are required"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         # Check if the room exists
         try:
-            room = Room.objects.get(room_code=room_code)
+            room = Room.objects.get(room_code=room_code, status="active")
         except Room.DoesNotExist:
             return Response(
-                {"error": "Room not found."}, status=status.HTTP_404_NOT_FOUND
+                {"error": "Room not found or has already been closed."},
+                status=status.HTTP_404_NOT_FOUND,
             )
         if request.user == room.host:
             return Response(
@@ -152,6 +153,24 @@ class JoinRoomView(APIView):
         return Response(response_data, status=status.HTTP_200_OK)
 
 
+class EndRoomView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        active_rooms = user.hosted_rooms.filter(status="active")
+        if not active_rooms.exists():
+            return Response(
+                {"error": "No active rooms found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        room = active_rooms.latest("created_at")
+        room.status = "ended"
+        room.updated_at = timezone.now()
+        room.save()
+        return Response({"status": "room_closed"}, status=status.HTTP_200_OK)
+
+
 class SubtopicsAPIView(AsyncAPIView):
     permission_classes = [IsAuthenticated]
 
@@ -180,7 +199,7 @@ class CreateGameView(AsyncAPIView):
     def validate_room(self, room_code):
         """Validate the room code and return the room object."""
         try:
-            room = Room.objects.get(room_code=room_code)
+            room = Room.objects.get(room_code=room_code, status="active")
         except Room.DoesNotExist:
             return None
         return room
@@ -245,9 +264,7 @@ class CreateGameView(AsyncAPIView):
 
     @database_sync_to_async
     def validate_user(self, room, request):
-        if request.user == room.host:
-            return True
-        return False
+        return request.user == room.host
 
     @swagger_auto_schema(
         request_body=CreateGameSerializer,
@@ -279,7 +296,7 @@ class CreateGameView(AsyncAPIView):
         room = await self.validate_room(room_code)
         if room is None:
             return Response(
-                {"error": f"Room with code {room_code} not found."},
+                {"error": f"Room with code {room_code} not found or has been closed."},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
