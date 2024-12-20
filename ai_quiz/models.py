@@ -88,7 +88,7 @@ class Game(models.Model):
     current_question = models.IntegerField(default=0)
 
     def __str__(self):
-        return f"Game in Room {self.room.room_id} - {self.status}"
+        return f"{self.id}-{self.status}"
 
     def create_leaderboard(self):
         print("Creating leaderboard")
@@ -166,17 +166,35 @@ class Leaderboard(models.Model):
         return f"Leaderboard for Game {self.game.id}"
 
 
+class Topic(models.Model):
+    name = models.CharField(max_length=512, unique=True)
+    subtopics = models.JSONField(
+        default=list, null=True, blank=True
+    )  # Store subtopics as a JSON list
+
+    def __str__(self):
+        return self.name
+
+
 # Question model to define the trivia questions for each room
 class Question(models.Model):
     game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name="questions")
-    text = models.CharField(max_length=512)
+    question = models.CharField(max_length=512)
+    subtopic = models.CharField(max_length=512, null=True, blank=True)
+    topic = models.ForeignKey(
+        Topic,
+        on_delete=models.CASCADE,
+        related_name="question_topic",
+        null=True,
+        blank=True,
+    )
     options = models.JSONField()  # Store options as a JSON list
     correct_answer = models.CharField(max_length=512)
     timer = models.IntegerField(default=30)  # Time limit for each question in seconds
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Q{self.id} - {self.text}"
+        return f"Q{self.id} - {self.question}"
 
 
 # Answer model to track answers submitted by players

@@ -100,6 +100,7 @@ For each topic, decide to choose some subtopics from the given list and generate
   - There is ONLY one correct answer.
   - The other three options are plausible but incorrect.
   - The correct answer should be randomly positioned among the four options.
+- You MUST pick the subtopics randomly from the list provided.
 
 
 ### Here is the data you'll need to generate the questions:
@@ -114,38 +115,41 @@ Begin!
 """
 )
 
+TOPIC_LLM = ChatOpenAI(
+    model="gpt-4o-mini",
+    model_kwargs={"response_format": {"type": "text"}},
+    temperature=0.2,
+)
+QUESTION_LLM = ChatOpenAI(
+    model="gpt-4o",
+    model_kwargs={"response_format": {"type": "text"}},
+    temperature=0.2,
+)
 
-# Choose the LLM to use
-def generate_questions(topic: str, n_questions: int, difficulty: str) -> list[dict]:
-    topic_llm = ChatOpenAI(
-        model="gpt-4o-mini",
-        model_kwargs={"response_format": {"type": "text"}},
-    )
-    question_llm = ChatOpenAI(
-        model="gpt-4o",
-        model_kwargs={"response_format": {"type": "text"}},
-    )
 
+async def generate_subtopics(topic: str) -> TopicGenerator:
     topic_chain = (
         TOPIC_GENERATOR_PROMPT
-        | topic_llm
+        | TOPIC_LLM
         | YamlOutputParser(pydantic_object=TopicGenerator)
     )
-    quiz_chain = (
-        QUESTION_GENERATOR_PROMPT | question_llm
-    )  # | YamlOutputParser(pydantic_object=TriviaGenerator)
-
-    logger.info("Generating subtopics....")
+    logger.info(f"Generating subtopics for topic: {topic}")
     subtopics: TopicGenerator = topic_chain.invoke({"topic": topic})
-    print("Thoughts: ", subtopics.thoughts)
-    print("Topic: ", subtopics.topic)
-    print("Subtopics: ", subtopics.subtopics)
+    logger.info(f"Generated subtopics: {subtopics.subtopics}")
+    return subtopics
+
+
+async def generate_questions(
+    topic: str, n_questions: int, difficulty: str
+) -> tuple[TriviaGenerator, TopicGenerator]:
+    subtopics = await generate_subtopics(topic)
+    quiz_chain = (QUESTION_GENERATOR_PROMPT | QUESTION_LLM) | YamlOutputParser(
+        pydantic_object=TriviaGenerator
+    )
     # Shuffle the subtopics randomly for variety
     random.shuffle(subtopics.subtopics)
-
-    # logger.info(f"Generated subtopics: {subtopics}")
-    logger.info("Generating questions....")
-    questions = quiz_chain.stream(
+    logger.info(f"Generating {n_questions} questions for topic: {topic}")
+    questions = await quiz_chain.ainvoke(
         {
             "topic": topic,
             "subtopics": subtopics.subtopics,
@@ -153,13 +157,45 @@ def generate_questions(topic: str, n_questions: int, difficulty: str) -> list[di
             "difficulty": difficulty,
         }
     )
-    for chunk in questions:
-        print(chunk.content, end="")
-    logger.info(f"Generated questions: {questions}")
-
-    # return questions
+    logger.info(f"Generated {n_questions} questions: {questions.questions}")
+    return questions, subtopics
 
 
-# print(TOPIC_GENERATOR_PROMPT)
 if __name__ == "__main__":
-    generate_questions("Johnny sins", 5, "hard")
+    import asyncio
+
+    # Create some mock data
+    # For topics
+    mockTopicGenerator = TopicGenerator(
+        thoughts="",
+        topic="Nepal",
+        subtopics=[
+            "Geography",
+            "Culture",
+            "History",
+            "Mountains",
+            "Religion",
+            "Food",
+            "Tourism",
+            "Wildlife",
+            "People",
+            "Economy",
+        ],
+    )
+    # For questions
+    mockTriviaGenerator = TriviaGenerator(
+        thoughts="",
+        topic="Nepal",
+        difficulty="easy",
+        n=1,
+        questions=[
+            Question(
+                subtopic="Geography",
+                question="What is the capital of Nepal?",
+                answer="Kathmandu",
+                options=["Kathmandu", "Pokhara", "Bhaktapur", "Lalitpur"],
+            )
+        ],
+    )
+    response = asyncio.run(generate_questions("Nepal", 1, "easy"))
+    print(response.questions)
