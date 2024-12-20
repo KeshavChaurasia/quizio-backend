@@ -10,8 +10,6 @@ class User(AbstractUser):
         ("host", "Host"),
     ]
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    # TODO: This is redundant: Try remove it and seeing what happens
-    role = models.CharField(max_length=6, choices=ROLE_CHOICES, default="host")
     email = models.EmailField(unique=True)
 
     def clean(self):
