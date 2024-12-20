@@ -5,6 +5,7 @@ from ai_quiz.views import (
     JoinRoomView,
     StartGameView,
     EndGameView,
+    SubtopicsAPIView,
 )
 
 urlpatterns = [
@@ -13,4 +14,5 @@ urlpatterns = [
     path("game/create", CreateGameView.as_view(), name="create_game"),
     path("game/start", StartGameView.as_view(), name="start_game"),
     path("game/end", EndGameView.as_view(), name="end_game"),
+    path("topic", SubtopicsAPIView.as_view(), name="generate_subtopics"),
 ]

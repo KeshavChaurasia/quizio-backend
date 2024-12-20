@@ -9,7 +9,7 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from ai_quiz.ai import generate_questions
+from ai_quiz.ai import generate_questions, generate_subtopics
 from ai_quiz.models import Game, GuestUser, Participant, Question, Room, Topic
 from channels.db import sync_to_async, database_sync_to_async
 import logging
@@ -128,6 +128,20 @@ class JoinRoomView(APIView):
         }
 
         return Response(response_data, status=status.HTTP_200_OK)
+
+
+class SubtopicsAPIView(AsyncAPIView):
+    permission_classes = [IsAuthenticated]
+
+    async def post(self, request, *args, **kwargs):
+        topic = request.data.get("topic")
+        if not topic:
+            return Response(
+                {"error": "`topic` is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        subtopics = await generate_subtopics(topic)
+        return Response({"subtopics": subtopics.subtopics}, status=status.HTTP_200_OK)
 
 
 class CreateGameView(AsyncAPIView):
