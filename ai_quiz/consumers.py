@@ -1,33 +1,39 @@
-# consumers.py
-import asyncio
-from collections import defaultdict
 import json
-from urllib.parse import parse_qs
+from collections import defaultdict
 
 from channels.db import database_sync_to_async, sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.contrib.auth import get_user_model
 from django.db.models import Q
+from django.utils import timezone
 from rest_framework_simplejwt.tokens import UntypedToken
 
 from ai_quiz.models import Game, Participant, Room
+from ai_quiz.serializers import QuestionSerializer
 
 
 class RoomConsumer(AsyncWebsocketConsumer):
-    active_users = defaultdict(set)
+    active_users = defaultdict(dict)
 
     async def connect(self):
-        print("Connected to websocket")
-        print("room code from url is", self.scope["url_route"]["kwargs"])
         self.room_code = self.scope["url_route"]["kwargs"]["room_code"]
 
-        # Join room group
+        RoomConsumer.active_users[self.room_code] = {}
+
         await self.channel_layer.group_add(self.room_code, self.channel_name)
-        print("User connected to room:", self.room_code)
         await self.accept()
 
     async def disconnect(self, close_code):
-        # Leave room group
+        participants = await database_sync_to_async(Participant.objects.filter)(
+            Q(user__username=self.username) | Q(guest_user__username=self.username),
+            room__room_code=self.room_code,
+        )
+        if not await participants.aexists():
+            return
+        participant = await participants.afirst()
+        participant.status = "inactive"
+        await participant.asave()
+        await self.send_all_player_names()
         await self.channel_layer.group_discard(self.room_code, self.channel_name)
 
     async def receive(self, text_data):
@@ -46,13 +52,12 @@ class RoomConsumer(AsyncWebsocketConsumer):
             pass
         else:
             raise ValueError("Invalid event type")
-        # message = data["message"]
 
     @sync_to_async
     def get_all_participants(self):
         room = Room.objects.filter(room_code=self.room_code)
         if room.exists():
-            participants = room.first().participants.all()
+            participants = room.first().participants.filter(~Q(status="inactive"))
             return [p.user.username for p in participants if p.user] + [
                 p.guest_user.username for p in participants if p.guest_user
             ]
@@ -69,20 +74,23 @@ class RoomConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def get_next_question(self):
-        print("Room code is", self.room_code)
-        game = Game.objects.filter(room__room_code=self.room_code).first()
-        if not game:
-            print("Cannot find game..")
+        games = Game.objects.filter(
+            room__room_code=self.room_code, status="in_progress"
+        )
+        if not games.exists():
             return None
+        game = games.latest("created_at")
         questions = game.questions.all()
         if game.current_question < len(questions):
             new_question = questions[game.current_question]
             game.current_question += 1
             game.save()
-            print(f"New question is: {new_question}")
             return new_question
-        else:
-            print("All questions done;")
+        # This means the game is over
+        game.status = "finished"
+        game.ended_at = timezone.now()
+        game.save()
+        return None
 
     async def handle_next_question(self, data):
         token = data.get("token")
@@ -111,17 +119,29 @@ class RoomConsumer(AsyncWebsocketConsumer):
                 },
             )
         question = await self.get_next_question()
-        await self.channel_layer.group_send(
-            self.room_code,
-            {
-                "type": "room_message",
-                "event": {"type": "next_question", "event": question},
-            },
-        )
+        if question is not None:
+            question_serializer = QuestionSerializer(question)
+            await self.channel_layer.group_send(
+                self.room_code,
+                {
+                    "type": "room_message",
+                    "event": {
+                        "type": "next_question",
+                        "event": question_serializer.data,
+                    },
+                },
+            )
+        else:
+            await self.channel_layer.group_send(
+                self.room_code,
+                {
+                    "type": "room_message",
+                    "event": {"type": "all_questions_done"},
+                },
+            )
 
     @sync_to_async
     def update_participant(self, username, status="ready"):
-        print("Room code is:", self.room_code)
         participants = Participant.objects.filter(
             Q(user__username=username) | Q(guest_user__username=username),
             room__room_code=self.room_code,
@@ -129,11 +149,8 @@ class RoomConsumer(AsyncWebsocketConsumer):
         if participants.exists():
             participant = participants.first()
             if participant.status != status:
-                print("Found username:", participant.user, participant.guest_user)
                 participant.status = status
                 participant.save()
-            else:
-                print(f"Participant is already {status}...")
             return participant
         return None
 
@@ -141,10 +158,9 @@ class RoomConsumer(AsyncWebsocketConsumer):
         # If player is waiting, update the status in the database
         # and broadcast a message to all the users in the room using event type "player_waiting"
         username = data["username"]
-        RoomConsumer.active_users[self.room_code].add(username)
+
         participant = await self.update_participant(username, status="waiting")
         if participant:
-            print("Participant is waiting...")
             await self.channel_layer.group_send(
                 self.room_code,
                 {
@@ -159,10 +175,9 @@ class RoomConsumer(AsyncWebsocketConsumer):
         # If player is ready, update the status in the database
         # and broadcast a message to all the users in the room using event type "player_ready"
         username = data["username"]
-        RoomConsumer.active_users[self.room_code].add(username)
+        self.username = username
         participant = await self.update_participant(username, status="ready")
         if participant:
-            print("Participant is ready...")
             await self.channel_layer.group_send(
                 self.room_code,
                 {
@@ -181,11 +196,9 @@ class RoomConsumer(AsyncWebsocketConsumer):
     def authenticate_user(self, token):
         try:
             # Validate the token using Simple JWT
-            print("Authenticated with token:", token)
             UntypedToken(token)  # Validate token
             user_id = UntypedToken(token).payload["user_id"]
             User = get_user_model()
             return User.objects.get(id=user_id)
-        except Exception as e:
-            print(f"Authentication error: {e}")
+        except Exception:
             return None

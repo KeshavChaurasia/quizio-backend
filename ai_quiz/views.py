@@ -1,18 +1,26 @@
 import base64
+import logging
 from io import BytesIO
 
 import qrcode
-from django.contrib.auth import get_user_model
 from adrf.views import APIView as AsyncAPIView
+from channels.db import database_sync_to_async
+from django.contrib.auth import get_user_model
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
-from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
 from ai_quiz.ai import generate_questions, generate_subtopics
 from ai_quiz.models import Game, GuestUser, Participant, Question, Room, Topic
-from channels.db import sync_to_async, database_sync_to_async
-import logging
+from ai_quiz.serializers import (
+    CreateGameSerializer,
+    CreateRoomSerializer,
+    JoinRoomSerializer,
+    StartGameSerializer,
+    SubtopicsSerializer,
+)
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -33,6 +41,13 @@ class CreateRoomView(APIView):
         IsAuthenticated
     ]  # Ensure only authenticated users can create a room
 
+    @swagger_auto_schema(
+        request_body=CreateRoomSerializer,
+        responses={
+            201: CreateRoomSerializer,
+        },
+        operation_description="Create a room with a custom serializer",
+    )
     def post(self, request, *args, **kwargs):
         """Handle room creation by the host."""
         user = request.user  # This will be the logged-in host
@@ -78,6 +93,13 @@ class CreateRoomView(APIView):
 
 
 class JoinRoomView(APIView):
+    @swagger_auto_schema(
+        request_body=JoinRoomSerializer,
+        responses={
+            201: JoinRoomSerializer,
+        },
+        operation_description="Create a room with a custom serializer",
+    )
     def post(self, request, *args, **kwargs):
         """Allow a participant to join the room."""
         room_code = request.data.get("roomCode")
@@ -133,6 +155,13 @@ class JoinRoomView(APIView):
 class SubtopicsAPIView(AsyncAPIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        request_body=SubtopicsSerializer,
+        responses={
+            201: SubtopicsSerializer,
+        },
+        operation_description="Create a room with a custom serializer",
+    )
     async def post(self, request, *args, **kwargs):
         topic = request.data.get("topic")
         if not topic:
@@ -166,7 +195,7 @@ class CreateGameView(AsyncAPIView):
 
     async def create_game(self, room, topic, n, difficulty):
         """Create a new game object associated with the room."""
-        game = await Game.objects.acreate(room=room)
+        game = await Game.objects.acreate(room=room, status="waiting")
         subtopics = await generate_subtopics(topic)
         questions = await self._fetch_and_create_questions(
             game=game,
@@ -220,6 +249,13 @@ class CreateGameView(AsyncAPIView):
             return True
         return False
 
+    @swagger_auto_schema(
+        request_body=CreateGameSerializer,
+        responses={
+            201: CreateGameSerializer,
+        },
+        operation_description="Create a room with a custom serializer",
+    )
     async def post(self, request, *args, **kwargs):
         room_code = request.data.get("roomCode")
         topic = request.data.get("topic")
@@ -259,7 +295,6 @@ class CreateGameView(AsyncAPIView):
         if game is not None:
             return Response(
                 {
-                    "status": "game_started",
                     "gameId": game.id,
                 }
             )
@@ -275,6 +310,13 @@ class CreateGameView(AsyncAPIView):
 class StartGameView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        request_body=StartGameSerializer,
+        responses={
+            201: StartGameSerializer,
+        },
+        operation_description="Create a room with a custom serializer",
+    )
     def post(self, request, *args, **kwargs):
         """Start the game."""
         room_code = request.data.get("roomCode")
@@ -307,10 +349,13 @@ class StartGameView(APIView):
                     {"error": "All participants must be ready to start the game."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            game = room.start_new_game()
+
+            game = room.get_waiting_game()
+            game.create_leaderboard()
+            game.status = "in_progress"
+            game.save()
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
         response_data = {
             "status": "game_started",
             "gameId": game.id,

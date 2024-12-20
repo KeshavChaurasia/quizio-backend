@@ -29,18 +29,19 @@ class Room(models.Model):
     def __str__(self):
         return f"Room {self.room_code} - {self.status}"
 
-    def start_new_game(self):
-        games = self.games.filter(status="in_progress")
-        if games.exists():
-            game_id = games.first().id
-            raise ValueError(f"Game: {game_id} is already in progress.")
-
-        game = Game.objects.create(room=self)
-        game.create_questions()
-        game.create_leaderboard()
-        self.status = "active"
-        self.save()
-        return game
+    def get_waiting_game(self):
+        try:
+            waiting_game = self.games.get(status="waiting")
+            try:
+                waiting_game.leaderboard
+            except Leaderboard.DoesNotExist:
+                waiting_game.create_leaderboard()
+            return waiting_game
+        except Game.DoesNotExist:
+            raise ValueError("Create a game before starting.")
+        except Game.MultipleObjectsReturned:
+            # Handle the case where multiple games are found
+            raise ValueError("Multiple games with status 'waiting' found.")
 
     def end_game(self):
         if self.games.filter(status="in_progress").exists():
@@ -48,7 +49,6 @@ class Room(models.Model):
             game.status = "finished"
             game.ended_at = timezone.now()
             game.save()
-            self.save()
             return game
         else:
             raise ValueError("No game in progress to end.")
@@ -92,21 +92,9 @@ class Game(models.Model):
 
     def create_leaderboard(self):
         print("Creating leaderboard")
-        self.leaderboard = Leaderboard.objects.get_or_create(game=self)[0]
+        self.leaderboard, _ = Leaderboard.objects.get_or_create(game=self)
         print(self.leaderboard)
         return self.leaderboard
-
-    def create_questions(self):
-        questions = [
-            Question.objects.create(
-                game=self,
-                text=f"Question; {i}",
-                correct_answer="test",
-                options=["test", "no_test"],
-            )
-            for i in range(5)
-        ]
-        return questions
 
 
 class Participant(models.Model):

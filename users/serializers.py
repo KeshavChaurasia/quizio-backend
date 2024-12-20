@@ -62,3 +62,19 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["id", "username", "email", "profile"]
+
+
+class RegisterUserSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=100)
+    email = serializers.EmailField()
+    password = serializers.CharField(max_length=100)
+
+
+class ForgotPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(max_length=100)
+    new_password = serializers.CharField(max_length=100)
+    confirm_password = serializers.CharField(max_length=100)

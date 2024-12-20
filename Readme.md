@@ -113,3 +113,13 @@ This project is licensed under the MIT License. See the LICENSE file for more de
 ## Support
 
 If you encounter any issues, please open an issue on GitHub or reach out to the maintainer.
+
+# TODO
+[x] allow user to login with either username or password
+[x] add email validation to user model
+[x] Remove username from create room API
+[x] Rename joinLink to roomCode
+[x] If room already active, send the same response
+[x] Integrate the ai backend with the game start method
+[x] Handle disconnected users
+[x] Add swagger docs

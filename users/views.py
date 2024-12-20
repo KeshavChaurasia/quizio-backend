@@ -1,25 +1,40 @@
-from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth import get_user_model, update_session_auth_hash
 from django.contrib.auth.hashers import make_password
-from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.core.mail import send_mail
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .serializers import CustomTokenObtainPairSerializer
+
 from users.serializers import (
     ProfileSerializer,
     UserSerializer,
 )
-from django.core.exceptions import ValidationError
+
+from .serializers import (
+    ChangePasswordSerializer,
+    CustomTokenObtainPairSerializer,
+    ForgotPasswordSerializer,
+    RegisterUserSerializer,
+)
 
 User = get_user_model()
+token_generator = PasswordResetTokenGenerator()
 
 
+@swagger_auto_schema(
+    method="post",
+    request_body=RegisterUserSerializer,
+    responses={
+        201: RegisterUserSerializer,
+    },
+    operation_description="Create a room with a custom serializer",
+)
 @api_view(["POST"])
 def register_user(request):
     """Responsible for registering a new user"""
@@ -67,6 +82,14 @@ def user_profile(request):
         return Response(serializer.errors, status=400)
 
 
+@swagger_auto_schema(
+    method="put",
+    request_body=ChangePasswordSerializer,
+    responses={
+        201: ChangePasswordSerializer,
+    },
+    operation_description="Create a room with a custom serializer",
+)
 @api_view(["PUT"])
 @permission_classes([IsAuthenticated])
 def change_password(request):
@@ -93,9 +116,14 @@ def change_password(request):
     )
 
 
-token_generator = PasswordResetTokenGenerator()
-
-
+@swagger_auto_schema(
+    method="post",
+    request_body=ForgotPasswordSerializer,
+    responses={
+        201: ForgotPasswordSerializer,
+    },
+    operation_description="Create a room with a custom serializer",
+)
 @api_view(["POST"])
 def forgot_password(request):
     """Responsible for sending a password reset email.
