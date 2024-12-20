@@ -53,7 +53,7 @@ class CreateRoomView(APIView):
         user = request.user  # This will be the logged-in host
 
         # Check if a room already exists for the host
-        room = Room.objects.filter(host=user)
+        room = Room.objects.filter(host=user, status="active")
         if room.exists():
             room = room.first()
             qr_code = generate_qr_code(room.room_code)
