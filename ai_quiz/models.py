@@ -1,9 +1,12 @@
 import random
 import string
 import uuid
-from django.db import models
-from django.utils import timezone
+
 from django.contrib.auth import get_user_model
+from django.db import models
+from django.db.models import Q
+from django.utils import timezone
+
 from users.models import GuestUser
 
 User = get_user_model()
@@ -127,6 +130,26 @@ class Participant(models.Model):
 
     def __str__(self):
         return f"Participant for Room {self.room.room_id}"
+
+    @staticmethod
+    def get_participant_by_username(username, **additional_filters):
+        try:
+            return Participant.objects.get(
+                Q(user__username=username) | Q(guest_user__username=username),
+                **additional_filters,
+            )
+        except (Participant.DoesNotExist, Participant.MultipleObjectsReturned):
+            return None
+
+    @staticmethod
+    def aget_participant_by_username(username, **additional_filters):
+        try:
+            return Participant.objects.aget(
+                Q(user__username=username) | Q(guest_user__username=username),
+                **additional_filters,
+            )
+        except (Participant.DoesNotExist, Participant.MultipleObjectsReturned):
+            return None
 
 
 class Leaderboard(models.Model):

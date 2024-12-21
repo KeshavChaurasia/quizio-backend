@@ -2,16 +2,39 @@ import json
 
 from channels.db import database_sync_to_async, sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
-from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django.utils import timezone
-from rest_framework_simplejwt.tokens import UntypedToken
 
+from ai_quiz.consumers.event_handlers import (
+    NextQuestionEventHandler,
+    PlayerReadyEventHandler,
+    PlayerWaitingEventHandler,
+    QuestionAnsweredEventHandler,
+)
 from ai_quiz.models import Game, Participant, Question, Room
 from ai_quiz.serializers import QuestionSerializer
+from users.authenticators import aget_authenticated_user
 
 
 class RoomConsumer(AsyncWebsocketConsumer):
+    event_handlers = {
+        "player_ready": PlayerReadyEventHandler,
+        "player_waiting": PlayerWaitingEventHandler,
+        "next_question": NextQuestionEventHandler,
+        "question_answered": QuestionAnsweredEventHandler,
+    }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.room_code = None
+        self._init_event_handlers()
+
+    def _init_event_handlers(self):
+        for event_type in self.event_handlers:
+            self.event_handlers[event_type] = self.event_handlers[event_type](
+                consumer=self
+            )
+
     async def connect(self):
         self.room_code = self.scope["url_route"]["kwargs"]["room_code"]
 
@@ -40,7 +63,7 @@ class RoomConsumer(AsyncWebsocketConsumer):
         data = json.loads(text_data)
         event_type = data["type"]
         if event_type == "player_ready":
-            await self.handle_player_ready(data)
+            await self.event_handlers[event_type].handle(data)
         elif event_type == "player_waiting":
             await self.handle_player_waiting(data)
         elif event_type == "next_question":
@@ -110,11 +133,11 @@ class RoomConsumer(AsyncWebsocketConsumer):
     async def handle_next_question(self, data):
         token = data.get("token")
         if not token:
-            await self.send_data_to_user({"error": "No token found."})
+            await self.send_error("No token found.")
             return
-        user = await self.authenticate_user(token)
+        user = await aget_authenticated_user(token)
         if user is None:
-            await self.send_data_to_user({"error": "Invalid token."})
+            await self.send_error("Invalid token.")
             return
 
         await self.send_data_to_user({"success": "Authenticated."})
@@ -227,17 +250,9 @@ class RoomConsumer(AsyncWebsocketConsumer):
             await self.send_data_to_room({"type": "player_ready", "username": username})
         await self.send_all_player_names()
 
+    async def send_error(self, message):
+        await self.send_data_to_user({"error": message})
+
     async def room_message(self, event):
         message = event["event"]
         await self.send(text_data=json.dumps({"message": message}))
-
-    @database_sync_to_async
-    def authenticate_user(self, token):
-        try:
-            # Validate the token using Simple JWT
-            UntypedToken(token)  # Validate token
-            user_id = UntypedToken(token).payload["user_id"]
-            User = get_user_model()
-            return User.objects.get(id=user_id)
-        except Exception:
-            return None
