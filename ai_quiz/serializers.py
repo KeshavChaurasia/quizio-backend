@@ -75,3 +75,10 @@ class SubtopicsRequestSerializer(serializers.Serializer):
 
 class SubtopicsResponseSerializer(serializers.Serializer):
     subtopics = serializers.ListField(child=serializers.CharField(max_length=100))
+
+
+class QuestionsRequestSerializer(serializers.Serializer):
+    topic = serializers.CharField(max_length=100)
+    subtopics = serializers.ListField(child=serializers.CharField(max_length=100))
+    n = serializers.IntegerField()
+    difficulty = serializers.CharField(max_length=10)
