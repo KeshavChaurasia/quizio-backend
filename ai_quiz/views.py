@@ -26,19 +26,10 @@ from ai_quiz.serializers import (
     SubtopicsRequestSerializer,
     SubtopicsResponseSerializer,
 )
+from quizio.utils import generate_qr_code
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
-
-
-# Utility function to generate QR code in base64
-def generate_qr_code(join_link):
-    """Generate a QR code for the join link and return it as a base64 string."""
-    img = qrcode.make(join_link)
-    buffered = BytesIO()
-    img.save(buffered, format="PNG")
-    qr_code_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
-    return qr_code_base64
 
 
 class CreateRoomView(APIView):

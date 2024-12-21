@@ -1,4 +1,8 @@
+import base64
+from io import BytesIO
 from urllib.parse import parse_qs
+
+import qrcode
 
 
 def parse_query_string(query_string):
@@ -20,3 +24,12 @@ def parse_query_string(query_string):
         key: value[0] if len(value) == 1 else value
         for key, value in parsed_params.items()
     }
+
+
+def generate_qr_code(string: str):
+    """Generate a QR code for the join link and return it as a base64 string."""
+    img = qrcode.make(string)
+    buffered = BytesIO()
+    img.save(buffered, format="PNG")
+    qr_code_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
+    return qr_code_base64
