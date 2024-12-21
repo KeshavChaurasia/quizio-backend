@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from ai_quiz.models import Participant
+from ai_quiz.models import Game, Participant
 
 from .base import BaseEventHandler
 
@@ -22,7 +22,10 @@ class PlayerReadyEventHandler(BaseEventHandler):
             return
 
         consumer.username = username
-
+        game = await Game.aget_current_game_for_room(consumer.room_code)
+        if game.status == "in_progress":
+            await consumer.send_error("Game has already started")
+            return
         participant = await Participant.update_participant_status(
             username, status="ready", room__room_code=consumer.room_code
         )

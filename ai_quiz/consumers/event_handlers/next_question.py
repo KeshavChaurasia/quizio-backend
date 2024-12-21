@@ -15,6 +15,8 @@ class NextQuestionEventHandler(BaseEventHandler):
 
     async def get_next_question(self, room_code: str):
         game = await Game.aget_current_game_for_room(room_code)
+        game.status = "in_progress"
+        await game.asave()
         new_question = await game.aget_next_question()
         # TODO: Reset the participant scores to 0
         return new_question

@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from ai_quiz.models import Participant
+from ai_quiz.models import Game, Participant
 
 from .base import BaseEventHandler
 
@@ -18,6 +18,11 @@ class PlayerWaitingEventHandler(BaseEventHandler):
         username = consumer.username
         if not username:
             await consumer.send_error("You need to be ready to wait.")
+            return
+
+        game = await Game.aget_current_game_for_room(consumer.room_code)
+        if game.status == "in_progress":
+            await consumer.send_error("Game has already started")
             return
 
         participant = await Participant.update_participant_status(

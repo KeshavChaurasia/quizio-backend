@@ -134,7 +134,8 @@ class Game(models.Model):
     async def aget_current_game_for_room(room_code: str):
         try:
             game = await Game.objects.aget(
-                room__room_code=room_code, status="in_progress"
+                Q(status="in_progress") | Q(status="waiting"),
+                room__room_code=room_code,
             )
             return game
         except (Game.DoesNotExist, Game.MultipleObjectsReturned):
