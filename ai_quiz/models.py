@@ -2,6 +2,7 @@ import random
 import string
 import uuid
 
+from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.db.models import Q
@@ -98,6 +99,47 @@ class Game(models.Model):
         leaderboard = Leaderboard.objects.get_or_create(game=self)
         return leaderboard
 
+    def get_next_question(self):
+        questions = self.questions.all()
+        if self.current_question < len(questions):
+            new_question = questions[self.current_question]
+            self.current_question += 0  # TODO: Fix this to 1
+            self.save()
+            return new_question
+        self.end_game()
+        return None
+
+    def end_game(self):
+        self.status = "finished"
+        self.ended_at = timezone.now()
+        self.save()
+
+    async def aend_game(self):
+        self.status = "finished"
+        self.ended_at = timezone.now()
+        await self.asave()
+
+    async def aget_next_question(self):
+        return await database_sync_to_async(self.get_next_question)()
+
+    @staticmethod
+    def get_current_game_for_room(room_code: str):
+        try:
+            game = Game.objects.get(room__room_code=room_code, status="in_progress")
+            return game
+        except (Game.DoesNotExist, Game.MultipleObjectsReturned):
+            return None
+
+    @staticmethod
+    async def aget_current_game_for_room(room_code: str):
+        try:
+            game = await Game.objects.aget(
+                room__room_code=room_code, status="in_progress"
+            )
+            return game
+        except (Game.DoesNotExist, Game.MultipleObjectsReturned):
+            return None
+
 
 class Participant(models.Model):
     STATUS_CHOICES = [
@@ -150,6 +192,36 @@ class Participant(models.Model):
             )
         except (Participant.DoesNotExist, Participant.MultipleObjectsReturned):
             return None
+
+    @staticmethod
+    async def update_participant_status(username, status="ready", **additional_filters):
+        participant = await Participant.aget_participant_by_username(
+            username, **additional_filters
+        )
+        if participant is not None and participant.status != status:
+            participant.status = status
+            await participant.asave()
+            return participant
+        return None
+
+    @staticmethod
+    def get_all_participants_from_room(room_code: str, *args, **additional_filters):
+        participants = Participant.objects.filter(
+            room__room_code=room_code, *args, **additional_filters
+        )
+        return [p.participant_username for p in participants]
+
+    @staticmethod
+    async def aget_all_participants_from_room(
+        room_code: str, *args, **additional_filters
+    ):
+        return await database_sync_to_async(Participant.get_all_participants_from_room)(
+            room_code, *args, **additional_filters
+        )
+
+    @property
+    def participant_username(self):
+        return self.user.username if self.user else self.guest_user.username
 
 
 class Leaderboard(models.Model):
@@ -205,6 +277,18 @@ class Question(models.Model):
 
     def __str__(self):
         return f"Q{self.id} - {self.question}"
+
+    @staticmethod
+    def get_all_questions_from_game(game, *args, **additional_filters):
+        questions = Question.objects.filter(game=game, *args, **additional_filters)
+        len_questions = len(questions)
+        return questions, len_questions
+
+    @staticmethod
+    async def aget_all_questions_from_game(game, *args, **additional_filters):
+        return await database_sync_to_async(Question.get_all_questions_from_game)(
+            game, *args, **additional_filters
+        )
 
 
 # Answer model to track answers submitted by players

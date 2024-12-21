@@ -8,30 +8,8 @@ if TYPE_CHECKING:
 
 @dataclass
 class BaseEventHandler(ABC):
-    consumer: "RoomConsumer"
     event_type: str = field(init=False)
 
     @abstractmethod
-    async def handle(self, event: dict):
+    async def handle(self, event: dict, consumer: "RoomConsumer"):
         pass
-
-    async def send_error(self, message):
-        await self.consumer.send_error(message)
-
-    async def send_data_to_room(self, data):
-        await self.consumer.send_data_to_room({"type": self.event_type, **data})
-
-    async def send_data_to_user(self, data):
-        await self.consumer.send_data_to_user(data)
-
-    @property
-    def room_code(self):
-        return self.consumer.room_code
-
-    @property
-    def username(self):
-        return self.consumer.username
-
-    @username.setter
-    def username(self, value):
-        self.consumer.username = value
