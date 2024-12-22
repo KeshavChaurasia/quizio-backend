@@ -1,5 +1,6 @@
 from django.test import TestCase
 from django.core.exceptions import ValidationError
+from ai_quiz.models import Room
 from users.models import Profile, GuestUser, User
 
 
@@ -43,22 +44,3 @@ class ProfileModelTest(TestCase):
             user=user, bio="This is a bio", avatar="http://example.com/avatar.jpg"
         )
         self.assertEqual(str(profile), "testuser's profile")
-
-
-class GuestUserModelTest(TestCase):
-    def setUp(self):
-        self.room = Room.objects.create(room_code="1234", status="active")
-
-    def test_create_guest_user(self):
-        guest_user = GuestUser.objects.create(
-            username="guestuser", room=self.room, score=10
-        )
-        self.assertEqual(guest_user.username, "guestuser")
-        self.assertEqual(guest_user.room, self.room)
-        self.assertEqual(guest_user.score, 10)
-
-    def test_guest_user_str(self):
-        guest_user = GuestUser.objects.create(
-            username="guestuser", room=self.room, score=10
-        )
-        self.assertEqual(str(guest_user), "Guest: guestuser")

@@ -6,9 +6,6 @@ from django.core.exceptions import ValidationError
 
 
 class User(AbstractUser):
-    ROLE_CHOICES = [
-        ("host", "Host"),
-    ]
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(unique=True)
 
@@ -41,6 +38,9 @@ class Profile(models.Model):
 
 # GuestUser model for unregistered users
 class GuestUser(models.Model):
+    # TODO: Might need to remove the room field
+    # Guests should not be tied to a specific room
+    # We have the Participant model for that
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     username = models.CharField(max_length=255)
     room = models.ForeignKey(
