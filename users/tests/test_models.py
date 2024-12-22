@@ -1,7 +1,6 @@
 from django.test import TestCase
 from django.core.exceptions import ValidationError
-from ai_quiz.models import Room
-from users.models import Profile, GuestUser, User
+from users.models import Profile, User
 
 
 class UserModelTest(TestCase):

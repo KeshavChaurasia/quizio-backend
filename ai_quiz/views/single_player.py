@@ -1,26 +1,18 @@
-import logging
 from rest_framework.views import APIView
 from adrf.views import APIView as AsyncAPIView
-from django.contrib.auth import get_user_model
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from ai_quiz.ai import generate_questions, generate_subtopics
+from ai_quiz.ai import generate_questions
 from ai_quiz.models import (
-    Game,
-    Participant,
-    Question,
     SinglePlayerGame,
     SinglePlayerQuestion,
     Topic,
 )
 from ai_quiz.serializers import (
     QuestionsRequestSerializer,
-    QuestionsResponseSerializer,
     SingleQuestionsResponseSerializer,
-    SubtopicsRequestSerializer,
-    SubtopicsResponseSerializer,
 )
 
 

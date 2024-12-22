@@ -108,7 +108,7 @@ class CreateGameView(AsyncAPIView):
         room = await self.validate_room(request.user)
         if room is None:
             return Response(
-                {"error": f"No active rooms found for user."},
+                {"error": "No active rooms found for user."},
                 status=status.HTTP_404_NOT_FOUND,
             )
         game = await self.validate_game(room)
