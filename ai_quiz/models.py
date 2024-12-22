@@ -15,6 +15,7 @@ User = get_user_model()
 
 # Room model to manage room creation, and the host relationship
 class Room(models.Model):
+    # TODO: Create room code automatically after initialization
     STATUS_CHOICES = [
         ("waiting", "Waiting"),
         ("active", "Active"),
