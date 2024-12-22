@@ -1,5 +1,5 @@
 import logging
-
+from django.db.models import Q
 from adrf.views import APIView as AsyncAPIView
 from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
@@ -24,10 +24,11 @@ User = get_user_model()
 class CreateGameView(AsyncAPIView):
     permission_classes = [IsAuthenticated]
 
-    async def validate_room(self, room_code):
+    @database_sync_to_async
+    def validate_room(self, user):
         """Validate the room code and return the room object."""
         try:
-            room = await Room.objects.aget(room_code=room_code, status="active")
+            room = user.hosted_rooms.get(Q(status="active") | Q(status="waiting"))
         except Room.DoesNotExist:
             return None
         return room
@@ -35,7 +36,7 @@ class CreateGameView(AsyncAPIView):
     async def validate_game(self, room: Room):
         """Validate if a game is already in progress."""
         try:
-            game = Game.objects.aget(room=room, status="in_progress")
+            game = await Game.objects.aget(room=room, status="in_progress")
             return game
         except Game.DoesNotExist:
             return None
@@ -53,13 +54,6 @@ class CreateGameView(AsyncAPIView):
         )
         return game.id
 
-    async def _get_or_create_topic(self, topic, subtopics):
-        """Get or create a topic object with the given subtopics."""
-        topic, _ = await Topic.objects.aget_or_create(name=topic)
-        topic.subtopics = list(set(subtopics)) + list(set(topic.subtopics))
-        await topic.asave()
-        return topic
-
     async def _fetch_and_create_questions(
         self,
         game: Game,
@@ -75,6 +69,7 @@ class CreateGameView(AsyncAPIView):
             n=n,
             difficulty=difficulty,
         )
+        topic = await Topic.objects.acreate(name=topic, subtopics=subtopics)
         questions = await Question.objects.abulk_create(
             [
                 Question(
@@ -83,16 +78,12 @@ class CreateGameView(AsyncAPIView):
                     question=question.question,
                     correct_answer=question.answer,
                     options=question.options,
-                    topic=await self._get_or_create_topic(topic, subtopics),
+                    topic=topic.name,
                 )
                 for question in questions.questions
             ]
         )
         return questions
-
-    @database_sync_to_async
-    def validate_user(self, room, request):
-        return request.user == room.host
 
     @swagger_auto_schema(
         request_body=CreateGameRequestSerializer,
@@ -102,7 +93,6 @@ class CreateGameView(AsyncAPIView):
         operation_description="Create a room with a custom serializer",
     )
     async def post(self, request, *args, **kwargs):
-        room_code = request.data.get("roomCode")
         topic = request.data.get("topic")
         subtopics = request.data.get("subtopics")
         n = request.data.get("n", 5)
@@ -114,25 +104,12 @@ class CreateGameView(AsyncAPIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if not room_code:
-            return Response(
-                {"error": "roomCode is required"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
         # Check if the room exists
-        room = await self.validate_room(room_code)
+        room = await self.validate_room(request.user)
         if room is None:
             return Response(
-                {"error": f"Room with code {room_code} not found or has been closed."},
+                {"error": f"No active rooms found for user."},
                 status=status.HTTP_404_NOT_FOUND,
-            )
-
-        # Check if the requesting user is the host
-        if not await self.validate_user(room, request):
-            return Response(
-                {"error": "Only the host can create the game."},
-                status=status.HTTP_403_FORBIDDEN,
             )
         game = await self.validate_game(room)
 
@@ -164,41 +141,30 @@ class StartGameView(APIView):
     )
     def post(self, request, *args, **kwargs):
         """Start the game."""
-        room_code = request.data.get("roomCode")
-
-        if not room_code:
+        room: Room = request.user.hosted_rooms.filter(
+            Q(status="active") | Q(status="waiting")
+        ).first()
+        if not room:
             return Response(
-                {"error": "roomCode is required"},
-                status=status.HTTP_400_BAD_REQUEST,
+                {"error": "You are not hosting any active rooms."},
+                status=status.HTTP_404_NOT_FOUND,
             )
-
-        # Check if the room exists
-        try:
-            room = Room.objects.get(room_code=room_code)
-        except Room.DoesNotExist:
-            return Response(
-                {"error": "Room not found."}, status=status.HTTP_404_NOT_FOUND
-            )
-
-        # Check if the requesting user is the host
-        if room.host != request.user:
-            return Response(
-                {"error": "Only the host can start the game."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
         try:
             # We need to check if all players are ready before starting the game
-            if room.participants.exclude(status="ready").exists():
+            if room.participants.exclude(
+                Q(status="ready") | Q(status="inactive")
+            ).exists():
                 return Response(
                     {"error": "All participants must be ready to start the game."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            game = room.get_waiting_game()
+            game = room.get_current_game()
             game.create_leaderboard()
             game.status = "in_progress"
             game.save()
+            room.status = "active"
+            room.save()
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         response_data = {

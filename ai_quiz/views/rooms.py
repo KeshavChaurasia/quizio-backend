@@ -4,7 +4,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
+from django.db.models import Q
 from ai_quiz.models import GuestUser, Participant, Room
 from ai_quiz.serializers import (
     CreateRoomRequestSerializer,
@@ -39,7 +39,7 @@ class CreateRoomView(APIView):
         user = request.user  # This will be the logged-in host
 
         # Check if a room already exists for the host
-        room = Room.objects.filter(host=user, status="active")
+        room = Room.objects.filter(Q(status="active") | Q(status="waiting"), host=user)
         if room.exists():
             room = room.first()
             qr_code = generate_qr_code(room.room_code)
@@ -56,7 +56,7 @@ class CreateRoomView(APIView):
             }
             return Response(response_data, status=status.HTTP_200_OK)
         # Create a new room for the host
-        room = Room.objects.create(host=user)
+        room = Room.objects.create(host=user, status="waiting")
 
         # Generate the join link and QR code
         room_code = room.room_code

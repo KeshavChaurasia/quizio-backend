@@ -82,3 +82,24 @@ class QuestionsRequestSerializer(serializers.Serializer):
     subtopics = serializers.ListField(child=serializers.CharField(max_length=100))
     n = serializers.IntegerField()
     difficulty = serializers.CharField(max_length=10)
+    timer = serializers.IntegerField()
+
+
+class SingleQuestionsResponseSerializer(serializers.Serializer):
+    questionId = serializers.CharField(max_length=100, source="id")
+    question = serializers.CharField(max_length=1024)
+    options = serializers.ListField(child=serializers.CharField(max_length=1024))
+    timer = serializers.IntegerField()
+
+
+class QuestionsResponseSerializer(serializers.ListSerializer):
+    child = SingleQuestionsResponseSerializer()
+
+
+class NextGameQuestionRequestSerializer(serializers.Serializer):
+    gameId = serializers.CharField(max_length=100)
+
+
+class CheckAnswerRequestSerializer(serializers.Serializer):
+    questionId = serializers.CharField(max_length=100)
+    answer = serializers.CharField(max_length=1024)

@@ -1,5 +1,5 @@
 import logging
-
+from rest_framework.views import APIView
 from adrf.views import APIView as AsyncAPIView
 from django.contrib.auth import get_user_model
 from drf_yasg.utils import swagger_auto_schema
@@ -7,6 +7,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from ai_quiz.ai import generate_questions, generate_subtopics
+from ai_quiz.models import Question
 from ai_quiz.serializers import (
     QuestionsRequestSerializer,
     SubtopicsRequestSerializer,
@@ -39,10 +40,11 @@ class SubtopicsAPIView(AsyncAPIView):
 
 
 class QuestionsAPIView(AsyncAPIView):
+    # TODO: See if I really need this
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
-        request_body=SubtopicsRequestSerializer,
+        request_body=QuestionsRequestSerializer,
         responses={
             201: SubtopicsResponseSerializer,
         },
@@ -54,4 +56,22 @@ class QuestionsAPIView(AsyncAPIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         questions = await generate_questions(**serializer.data)
+        # Create question objects here
+        questions = await Question.objects.abulk_create(
+            [
+                Question(
+                    question=q.question,
+                    options=q.options,
+                    timer=q.timer,
+                    subtopic=q.subtopic,
+                    difficulty=q.difficulty,
+                )
+                for q in questions.questions
+            ]
+        )
         return Response({"subtopics": subtopics.subtopics}, status=status.HTTP_200_OK)
+
+
+class CheckAnswerApiView(APIView):
+    def post(self, request, *args, **kwargs):
+        pass

@@ -153,7 +153,7 @@ async def generate_subtopics(topic: str) -> TopicGenerator:
 
 
 async def generate_questions(
-    topic: str, subtopics: list[str], n: int, difficulty: str
+    topic: str, subtopics: list[str], n: int, difficulty: str, **kwargs
 ) -> TriviaGenerator:
     # quiz_chain = (QUESTION_GENERATOR_PROMPT | QUESTION_LLM) | YamlOutputParser(
     #     pydantic_object=TriviaGenerator
@@ -182,7 +182,19 @@ async def generate_questions(
                 question="What is the capital of Nepal?",
                 answer="Kathmandu",
                 options=["Kathmandu", "Pokhara", "Bhaktapur", "Lalitpur"],
-            )
+            ),
+            Question(
+                subtopic="test2",
+                question="test2?",
+                answer="test2",
+                options=["test", "Pokhara", "Bhaktapur", "Lalitpur"],
+            ),
+            Question(
+                subtopic="test3",
+                question="test3?",
+                answer="test3",
+                options=["test", "Pokhara", "Bhaktapur", "Lalitpur"],
+            ),
         ],
     )
 

@@ -33,9 +33,9 @@ class Room(models.Model):
     def __str__(self):
         return f"Room {self.room_code} - {self.status}"
 
-    def get_waiting_game(self):
+    def get_current_game(self):
         try:
-            waiting_game = self.games.get(status="waiting")
+            waiting_game = self.games.get(Q(status="waiting") | Q(status="in_progress"))
             try:
                 waiting_game.leaderboard
             except Leaderboard.DoesNotExist:
@@ -82,10 +82,15 @@ class Game(models.Model):
         ("finished", "Finished"),
     ]
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    room = models.ForeignKey("Room", on_delete=models.CASCADE, related_name="games")
-    status = models.CharField(
-        max_length=15, choices=STATUS_CHOICES, default="in_progress"
+    room = models.ForeignKey(
+        "Room",
+        on_delete=models.CASCADE,
+        related_name="games",
+        null=True,
+        blank=True,
+        default=None,
     )
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default="waiting")
     started_at = models.DateTimeField(null=True, blank=True)
     ended_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -250,7 +255,7 @@ class Leaderboard(models.Model):
 
 
 class Topic(models.Model):
-    name = models.CharField(max_length=512, unique=True)
+    name = models.CharField(max_length=512, unique=False)
     subtopics = models.JSONField(
         default=list, null=True, blank=True
     )  # Store subtopics as a JSON list
@@ -272,6 +277,7 @@ class Question(models.Model):
         blank=True,
     )
     options = models.JSONField()  # Store options as a JSON list
+    difficulty = models.CharField(max_length=10, default="easy")
     correct_answer = models.CharField(max_length=512)
     timer = models.IntegerField(default=30)  # Time limit for each question in seconds
     created_at = models.DateTimeField(auto_now_add=True)
@@ -308,6 +314,119 @@ class Answer(models.Model):
         GuestUser,
         on_delete=models.CASCADE,
         related_name="answers",
+        null=True,
+        blank=True,
+    )
+    answer = models.CharField(max_length=512)
+    is_correct = models.BooleanField(default=None, null=True, blank=True)
+    submitted_at = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f"Answer by {self.user.username if self.user else self.guest_user.userName} to {self.question.text} - Correct: {self.is_correct}"
+
+    def save(self, *args, **kwargs):
+        # Automatically determine if the answer is correct
+        self.is_correct = self.answer == self.question.correct_answer
+        super().save(*args, **kwargs)
+
+
+class SinglePlayerGame(models.Model):
+    STATUS_CHOICES = [
+        ("waiting", "Waiting"),
+        ("in_progress", "In Progress"),
+        ("finished", "Finished"),
+    ]
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default="waiting")
+
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="single_player_games"
+    )
+    started_at = models.DateTimeField(null=True, blank=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+    current_question = models.IntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.id}-{self.status}"
+
+    def get_next_question(self):
+        questions = self.questions.all()
+        if self.current_question < len(questions):
+            new_question = questions[self.current_question]
+            self.current_question += 1  # TODO: Fix this to 1
+            self.save()
+            return new_question
+        self.end_game()
+        return None
+
+    def end_game(self):
+        self.status = "finished"
+        self.ended_at = timezone.now()
+        self.save()
+
+    async def aend_game(self):
+        self.status = "finished"
+        self.ended_at = timezone.now()
+        await self.asave()
+
+    async def aget_next_question(self):
+        return await database_sync_to_async(self.get_next_question)()
+
+
+class SinglePlayerQuestion(models.Model):
+    game = models.ForeignKey(
+        SinglePlayerGame, on_delete=models.CASCADE, related_name="questions"
+    )
+    question = models.CharField(max_length=512)
+    subtopic = models.CharField(max_length=512, null=True, blank=True)
+    topic = models.ForeignKey(
+        Topic,
+        on_delete=models.CASCADE,
+        related_name="single_player_question_topic",
+        null=True,
+        blank=True,
+    )
+    difficulty = models.CharField(max_length=10, default="easy")
+    options = models.JSONField()  # Store options as a JSON list
+    correct_answer = models.CharField(max_length=512)
+    timer = models.IntegerField(default=30)  # Time limit for each question in seconds
+    created_at = models.DateTimeField(auto_now_add=True)
+    answered = models.BooleanField(default=False)
+    skipped = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Q{self.id} - {self.question}"
+
+    @staticmethod
+    def get_all_questions_from_game(game, *args, **additional_filters):
+        questions = SinglePlayerQuestion.objects.filter(
+            game=game, *args, **additional_filters
+        )
+        len_questions = len(questions)
+        return questions, len_questions
+
+    @staticmethod
+    async def aget_all_questions_from_game(game, *args, **additional_filters):
+        return await database_sync_to_async(
+            SinglePlayerQuestion.get_all_questions_from_game
+        )(game, *args, **additional_filters)
+
+
+class SinglePlayerAnswer(models.Model):
+    question = models.ForeignKey(
+        SinglePlayerQuestion, on_delete=models.CASCADE, related_name="answers"
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="single_player_answers",
+        null=True,
+        blank=True,
+    )
+    guest_user = models.ForeignKey(
+        GuestUser,
+        on_delete=models.CASCADE,
+        related_name="single_player_answers",
         null=True,
         blank=True,
     )
