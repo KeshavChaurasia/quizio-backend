@@ -75,7 +75,9 @@ class RoomConsumer(AsyncWebsocketConsumer):
         usernames = await Participant.aget_all_participants_from_room(
             self.room_code, ~Q(status="inactive")
         )
-        await self.send_data_to_room({"type": "all_players", "usernames": usernames})
+        await self.send_data_to_room(
+            {"type": "all_players", "payload": {"usernames": usernames}}
+        )
 
     async def send_error(self, message):
         await self.send_data_to_user({"error": message})

@@ -16,7 +16,7 @@ class PlayerReadyEventHandler(BaseEventHandler):
 
     async def handle(self, event: dict, consumer: "RoomConsumer"):
         # TODO: Add a check to see if the game has started. If yes, refuse to let the player get ready
-        username = event.get("username")
+        username = event.get("payload", {}).get("username")
         if username is None:
             await consumer.send_error("username is required")
             return
@@ -31,6 +31,6 @@ class PlayerReadyEventHandler(BaseEventHandler):
         )
         if participant:
             await consumer.send_data_to_room(
-                {"type": self.event_type, "username": username}
+                {"type": self.event_type, "payload": {"username": username}}
             )
         await consumer.send_all_player_names()
