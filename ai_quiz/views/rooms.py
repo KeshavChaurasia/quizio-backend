@@ -99,7 +99,9 @@ class JoinRoomView(APIView):
 
         # Check if the room exists
         try:
-            room = Room.objects.get(room_code=room_code, status="active")
+            room = Room.objects.get(
+                Q(status="active") | Q(status="waiting"), room_code=room_code
+            )
         except Room.DoesNotExist:
             return Response(
                 {"error": "Room not found or has already been closed."},
