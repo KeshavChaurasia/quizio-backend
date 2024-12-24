@@ -117,7 +117,10 @@ class JoinRoomView(APIView):
         if request.user.is_authenticated:
             user = request.user
         else:
-            if GuestUser.objects.filter(username=username, room=room).exists():
+            participant = Participant.get_participant_by_username(
+                username=username, room=room
+            )
+            if participant:
                 return Response(
                     {"error": "Username is already taken."},
                     status=status.HTTP_400_BAD_REQUEST,
@@ -125,9 +128,9 @@ class JoinRoomView(APIView):
             user = GuestUser.objects.create(username=username, room=room)
         # Create a participant object for the user
         if isinstance(user, User):
-            participant = Participant.objects.create(user=user, room=room)
+            participant = Participant.objects.get_or_create(user=user, room=room)
         else:
-            participant = Participant.objects.create(guest_user=user, room=room)
+            participant = Participant.objects.get_or_create(guest_user=user, room=room)
         # Construct the response data for the participant
         response_data = {
             "userId": user.id,

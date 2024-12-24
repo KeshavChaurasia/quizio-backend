@@ -178,7 +178,8 @@ class Participant(models.Model):
     status = models.CharField(max_length=10, default="waiting", choices=STATUS_CHOICES)
 
     def __str__(self):
-        return f"Participant for Room {self.room.room_id}"
+        username = self.user.username if self.user else self.guest_user.username
+        return f"{username}:{self.room.room_code}"
 
     @staticmethod
     def get_participant_by_username(username, **additional_filters):

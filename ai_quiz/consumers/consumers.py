@@ -41,11 +41,10 @@ class RoomConsumer(AsyncWebsocketConsumer):
             await self.send_data_to_room(
                 {"type": "player_disconnected", "username": self.username}
             )
-            await Participant.update_participant_status(
-                username=self.username,
-                status="inactive",
-                room__room_code=self.room_code,
+            participant = await Participant.aget_participant_by_username(
+                username=self.username, room__room_code=self.room_code
             )
+            await participant.adelete()
             await self.send_all_player_names()
         await self.channel_layer.group_discard(self.room_code, self.channel_name)
 
