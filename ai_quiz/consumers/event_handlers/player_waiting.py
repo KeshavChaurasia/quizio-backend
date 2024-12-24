@@ -30,6 +30,6 @@ class PlayerWaitingEventHandler(BaseEventHandler):
         )
         if participant:
             await consumer.send_data_to_room(
-                {"type": self.event_type, "username": username}
+                {"type": self.event_type, "payload": {"username": username}}
             )
         await consumer.send_all_player_names()
