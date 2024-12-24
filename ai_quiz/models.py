@@ -191,9 +191,9 @@ class Participant(models.Model):
             return None
 
     @staticmethod
-    def aget_participant_by_username(username, **additional_filters):
+    async def aget_participant_by_username(username, **additional_filters):
         try:
-            return Participant.objects.aget(
+            return await Participant.objects.aget(
                 Q(user__username=username) | Q(guest_user__username=username),
                 **additional_filters,
             )
