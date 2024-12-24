@@ -21,7 +21,7 @@ class PlayerWaitingEventHandler(BaseEventHandler):
             return
 
         game = await Game.aget_current_game_for_room(consumer.room_code)
-        if game.status == "in_progress":
+        if game and game.status == "in_progress":
             await consumer.send_error("Game has already started")
             return
 

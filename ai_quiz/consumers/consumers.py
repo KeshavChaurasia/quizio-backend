@@ -9,7 +9,7 @@ from ai_quiz.consumers.event_handlers import (
     PlayerWaitingEventHandler,
     QuestionAnsweredEventHandler,
 )
-from ai_quiz.models import Participant
+from ai_quiz.models import Participant, Room
 
 
 class RoomConsumer(AsyncWebsocketConsumer):
@@ -30,7 +30,9 @@ class RoomConsumer(AsyncWebsocketConsumer):
 
     async def connect(self):
         self.room_code = self.scope["url_route"]["kwargs"]["room_code"]
-
+        if not await self.is_room_code_valid():
+            await self.close(code=401)
+            return
         await self.channel_layer.group_add(self.room_code, self.channel_name)
         await self.accept()
 
@@ -81,3 +83,10 @@ class RoomConsumer(AsyncWebsocketConsumer):
     async def room_message(self, event):
         message = event["event"]
         await self.send(text_data=json.dumps({"message": message}))
+
+    async def is_room_code_valid(self):
+        try:
+            await Room.objects.aget(room_code=self.room_code)
+            return True
+        except Room.DoesNotExist:
+            return False
