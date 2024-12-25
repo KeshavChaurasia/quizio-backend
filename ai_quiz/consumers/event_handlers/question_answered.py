@@ -14,7 +14,7 @@ class QuestionAnsweredEventHandler(BaseEventHandler):
     async def handle(self, data, consumer: "RoomConsumer"):
         username = consumer.username
         if not username:
-            await consumer.error("Username is required.")
+            await consumer.send_error("Username is required.")
             return
         question_id = data.get("payload", {}).get("questionId")
         answer = data.get("payload", {}).get("answer")
