@@ -1,8 +1,8 @@
 from unittest.mock import patch
 from django.test import TestCase
 
-from ai_quiz.models import Game, Question, Room
-from users.models import User
+from ai_quiz.models import Game, Participant, Question, Room
+from users.models import GuestUser, User
 
 
 class RoomModelTest(TestCase):
@@ -146,3 +146,77 @@ class GameModelTest(TestCase):
         game = await Game.objects.acreate(room=self.room, status="in_progress")
         current_game = await Game.aget_current_game_for_room(self.room.room_code)
         self.assertEqual(current_game, game)
+
+
+class ParticipantModelTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="testuser",
+            email="test@example.com",
+            password="password123",
+        )
+        self.room = Room.objects.create(host=self.user)
+        self.guest_user = GuestUser.objects.create(username="guestuser", room=self.room)
+        self.participant = Participant.objects.create(
+            room=self.room, user=self.user, status="waiting"
+        )
+
+    def test_create_participant(self):
+        participant = Participant.objects.create(
+            room=self.room, user=self.user, status="ready"
+        )
+        self.assertIsNotNone(participant.id)
+        self.assertEqual(participant.room, self.room)
+        self.assertEqual(participant.user, self.user)
+        self.assertEqual(participant.status, "ready")
+
+    def test_participant_str(self):
+        self.assertEqual(
+            str(self.participant), f"{self.user.username}:{self.room.room_code}"
+        )
+
+    def test_get_participant_by_username(self):
+        participant = Participant.get_participant_by_username(
+            self.user.username, room=self.room
+        )
+        self.assertEqual(participant, self.participant)
+
+    def test_get_participant_by_username_guest(self):
+        guest_participant = Participant.objects.create(
+            room=self.room, guest_user=self.guest_user, status="waiting"
+        )
+        participant = Participant.get_participant_by_username(
+            self.guest_user.username, room=self.room
+        )
+        self.assertEqual(participant, guest_participant)
+
+    async def test_aget_participant_by_username(self):
+        participant = await Participant.aget_participant_by_username(
+            self.user.username, room=self.room
+        )
+        self.assertEqual(participant, self.participant)
+
+    async def test_aget_participant_by_username_guest(self):
+        guest_participant = await Participant.objects.acreate(
+            room=self.room, guest_user=self.guest_user, status="waiting"
+        )
+        participant = await Participant.aget_participant_by_username(
+            self.guest_user.username, room=self.room
+        )
+        self.assertEqual(participant, guest_participant)
+
+    async def test_update_participant_status(self):
+        updated_participant = await Participant.update_participant_status(
+            self.user.username, status="ready", room=self.room
+        )
+        self.assertEqual(updated_participant.status, "ready")
+
+    def test_get_all_participants_from_room(self):
+        participants = Participant.get_all_participants_from_room(self.room.room_code)
+        self.assertIn(self.participant.participant_username, participants)
+
+    async def test_aget_all_participants_from_room(self):
+        participants = await Participant.aget_all_participants_from_room(
+            self.room.room_code
+        )
+        self.assertIn(self.participant.participant_username, participants)
