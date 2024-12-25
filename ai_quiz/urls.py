@@ -13,13 +13,13 @@ from ai_quiz.views import (
 )
 
 urlpatterns = [
-    path("rooms/create", CreateRoomView.as_view(), name="create_room"),
-    path("rooms/join", JoinRoomView.as_view(), name="join_room"),
-    path("rooms/end", EndRoomView.as_view(), name="end_room"),
-    path("game/create", CreateGameView.as_view(), name="create_game"),
-    path("game/start", StartGameView.as_view(), name="start_game"),
-    path("game/end", EndGameView.as_view(), name="end_game"),
-    path("topic", SubtopicsAPIView.as_view(), name="generate_subtopics"),
+    path("rooms/create/", CreateRoomView.as_view(), name="create_room"),
+    path("rooms/join/", JoinRoomView.as_view(), name="join_room"),
+    path("rooms/end/", EndRoomView.as_view(), name="end_room"),
+    path("game/create/", CreateGameView.as_view(), name="create_game"),
+    path("game/start/", StartGameView.as_view(), name="start_game"),
+    path("game/end/", EndGameView.as_view(), name="end_game"),
+    path("topic/", SubtopicsAPIView.as_view(), name="generate_subtopics"),
     path(
         "single-player/start",
         StartSinglePlayerGameAPIView.as_view(),

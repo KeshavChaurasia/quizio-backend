@@ -14,6 +14,8 @@ from ai_quiz.models import Participant, Room
 
 class RoomConsumer(AsyncWebsocketConsumer):
     event_handlers = {
+        # This comes from the frontend
+        # The event names that the backend sends are in the respective classes
         "player_ready": PlayerReadyEventHandler(),
         "player_waiting": PlayerWaitingEventHandler(),
         "send_next_question": NextQuestionEventHandler(),
