@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import logging
 
 from ai_quiz.models import Game, Participant
 
@@ -8,6 +9,8 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ai_quiz.consumers.consumers import RoomConsumer
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -30,6 +33,7 @@ class PlayerReadyEventHandler(BaseEventHandler):
             username, status="ready", room__room_code=consumer.room_code
         )
         if participant:
+            logger.debug(f"Player {username} is ready")
             await consumer.send_data_to_room(
                 {"type": self.event_type, "payload": {"username": username}}
             )

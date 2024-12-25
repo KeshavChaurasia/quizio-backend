@@ -1,4 +1,5 @@
 import json
+import logging
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.db.models import Q
@@ -10,6 +11,8 @@ from ai_quiz.consumers.event_handlers import (
     QuestionAnsweredEventHandler,
 )
 from ai_quiz.models import Participant, Room
+
+logger = logging.getLogger(__name__)
 
 
 class RoomConsumer(AsyncWebsocketConsumer):
@@ -53,6 +56,7 @@ class RoomConsumer(AsyncWebsocketConsumer):
     async def receive(self, text_data):
         data = json.loads(text_data)
         event_type = data["type"]
+        logger.info(f"Received event: {event_type}")
         try:
             # TODO: Currently, players who aren't in the current game can also send
             # events after the game has started. This should be fixed.
