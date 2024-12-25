@@ -64,7 +64,6 @@ class RoomConsumer(AsyncWebsocketConsumer):
         data = json.loads(text_data)
         event_type = data["type"]
         logger.info(f"Received event: {event_type}")
-        logger.debug("This is a test log")
         try:
             # TODO: Currently, players who aren't in the current game can also send
             # events after the game has started. This should be fixed.
