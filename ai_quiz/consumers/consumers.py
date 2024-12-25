@@ -16,7 +16,7 @@ class RoomConsumer(AsyncWebsocketConsumer):
     event_handlers = {
         "player_ready": PlayerReadyEventHandler(),
         "player_waiting": PlayerWaitingEventHandler(),
-        "next_question": NextQuestionEventHandler(),
+        "send_next_question": NextQuestionEventHandler(),
         "question_answered": QuestionAnsweredEventHandler(),
     }
 
