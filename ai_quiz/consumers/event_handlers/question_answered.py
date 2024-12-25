@@ -62,7 +62,10 @@ class QuestionAnsweredEventHandler(BaseEventHandler):
         await consumer.send_data_to_room(
             {
                 "type": "leaderboard_update",
-                "payload": [{d: leaderboard.data[d]} for d in leaderboard.data],
+                "payload": [
+                    {"username": d, "score": leaderboard.data[d]}
+                    for d in leaderboard.data
+                ],
             }
         )
         await participant.asave()

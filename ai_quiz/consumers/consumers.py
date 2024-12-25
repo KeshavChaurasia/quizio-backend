@@ -46,7 +46,7 @@ class RoomConsumer(AsyncWebsocketConsumer):
     async def disconnect(self, close_code):
         if self.username:
             await self.send_data_to_room(
-                {"type": "player_disconnected", "username": self.username}
+                {"type": "player_disconnected", "payload": {"username": self.username}}
             )
             participant = await Participant.aget_participant_by_username(
                 username=self.username, room__room_code=self.room_code
