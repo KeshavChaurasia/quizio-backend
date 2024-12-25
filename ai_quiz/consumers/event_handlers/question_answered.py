@@ -34,6 +34,9 @@ class QuestionAnsweredEventHandler(BaseEventHandler):
         participant = await Participant.aget_participant_by_username(
             username=username, room__room_code=consumer.room_code
         )
+        if not participant:
+            await consumer.send_error("Participant not found.")
+            return
         leaderboard, _ = await Leaderboard.objects.aget_or_create(game=game)
 
         if current_question.correct_answer == answer:

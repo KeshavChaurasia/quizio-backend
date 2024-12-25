@@ -106,9 +106,12 @@ class Game(models.Model):
 
     def get_next_question(self):
         questions = self.questions.all()
-        if self.current_question < len(questions):
+        len_questions = len(questions)
+        if not len_questions:
+            return None
+        if self.current_question < len_questions:
             new_question = questions[self.current_question]
-            self.current_question += 0  # TODO: Fix this to 1
+            self.current_question += 1
             self.save()
             return new_question
         self.end_game()
