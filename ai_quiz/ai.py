@@ -187,13 +187,13 @@ async def generate_questions(
                 subtopic="test2",
                 question="test2?",
                 answer="test2",
-                options=["test", "Pokhara", "Bhaktapur", "Lalitpur"],
+                options=["test2", "Pokhara", "Bhaktapur", "Lalitpur"],
             ),
             Question(
                 subtopic="test3",
                 question="test3?",
                 answer="test3",
-                options=["test", "Pokhara", "Bhaktapur", "Lalitpur"],
+                options=["test3", "Pokhara", "Bhaktapur", "Lalitpur"],
             ),
         ],
     )
