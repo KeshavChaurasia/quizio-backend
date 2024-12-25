@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 class NextQuestionEventHandler(BaseEventHandler):
-    event_type: str = "next_question"
+    event_type: str = "send_next_question"
 
     async def get_next_question(self, room_code: str):
         game = await Game.aget_current_game_for_room(room_code)
@@ -43,7 +43,7 @@ class NextQuestionEventHandler(BaseEventHandler):
                 await consumer.send_data_to_room(
                     {
                         "type": self.event_type,
-                        "event": question_serializer.data,
+                        "payload": question_serializer.data,
                     }
                 )
             else:
