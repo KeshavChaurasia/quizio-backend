@@ -78,7 +78,7 @@ class CreateGameView(AsyncAPIView):
                     question=question.question,
                     correct_answer=question.answer,
                     options=question.options,
-                    topic=topic.name,
+                    topic=topic,
                 )
                 for question in questions.questions
             ]
