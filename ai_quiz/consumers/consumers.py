@@ -34,12 +34,14 @@ class RoomConsumer(AsyncWebsocketConsumer):
         self._username = value
 
     async def connect(self):
+        logger.info(f"Connection request for {self.channel_name}")
         self.room_code = self.scope["url_route"]["kwargs"]["room_code"]
         if not await self.is_room_code_valid():
             await self.close(code=401)
             return
         await self.channel_layer.group_add(self.room_code, self.channel_name)
         await self.accept()
+        logger.info(f"Connection established for {self.channel_name}")
 
     async def disconnect(self, close_code):
         if self.username:

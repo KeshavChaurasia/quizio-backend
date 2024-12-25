@@ -48,7 +48,7 @@ class QuestionAnsweredEventHandler(BaseEventHandler):
             await consumer.send_data_to_user(
                 {
                     "type": "answer_validation",
-                    "event": {"answer": answer, "isCorrect": True},
+                    "payload": {"answer": answer, "isCorrect": True},
                 }
             )
         else:
@@ -56,13 +56,13 @@ class QuestionAnsweredEventHandler(BaseEventHandler):
             await consumer.send_data_to_user(
                 {
                     "type": "answer_validation",
-                    "event": {"answer": answer, "isCorrect": False},
+                    "payload": {"answer": answer, "isCorrect": False},
                 }
             )
         await consumer.send_data_to_room(
             {
                 "type": "leaderboard_update",
-                "data": leaderboard.data,
+                "payload": [{d: leaderboard.data[d]} for d in leaderboard.data],
             }
         )
         await participant.asave()
