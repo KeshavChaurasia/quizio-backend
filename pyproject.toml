@@ -24,6 +24,7 @@ langchain = "^0.3.12"
 langchain-aws = "^0.2.9"
 langchain-openai = "^0.2.12"
 channels-redis = "^4.2.1"
+colorlog = "^6.9.0"
 
 
 [tool.poetry.group.dev.dependencies]

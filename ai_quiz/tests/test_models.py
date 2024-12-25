@@ -119,7 +119,7 @@ class GameModelTest(TestCase):
 
     async def test_aget_next_question(self):
         game = await Game.objects.acreate(room=self.room, status="waiting")
-        question = Question.objects.create(
+        question = await Question.objects.acreate(
             question="What is the capital of France?",
             correct_answer="Paris",
             options=["Paris", "London", "Berlin", "Madrid"],

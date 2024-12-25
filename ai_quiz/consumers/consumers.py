@@ -49,7 +49,12 @@ class RoomConsumer(AsyncWebsocketConsumer):
             participant = await Participant.aget_participant_by_username(
                 username=self.username, room__room_code=self.room_code
             )
-            await participant.adelete()
+            if participant is None:
+                logger.debug(
+                    f"Participant not found: {self.username} while disconnecting."
+                )
+            else:
+                await participant.adelete()
             await self.send_all_player_names()
         await self.channel_layer.group_discard(self.room_code, self.channel_name)
 
@@ -57,6 +62,7 @@ class RoomConsumer(AsyncWebsocketConsumer):
         data = json.loads(text_data)
         event_type = data["type"]
         logger.info(f"Received event: {event_type}")
+        logger.debug("This is a test log")
         try:
             # TODO: Currently, players who aren't in the current game can also send
             # events after the game has started. This should be fixed.
