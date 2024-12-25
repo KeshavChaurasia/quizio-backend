@@ -16,8 +16,8 @@ class QuestionAnsweredEventHandler(BaseEventHandler):
         if not username:
             await consumer.error("Username is required.")
             return
-        question_id = data.get("questionId")
-        answer = data.get("answer")
+        question_id = data.get("payload", {}).get("questionId")
+        answer = data.get("payload", {}).get("answer")
         if not question_id or not answer:
             await consumer.send_data_to_user(
                 {"error": "questionId and answer are required."}

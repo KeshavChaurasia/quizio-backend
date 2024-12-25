@@ -19,7 +19,7 @@ class RoomConsumer(AsyncWebsocketConsumer):
         "player_ready": PlayerReadyEventHandler(),
         "player_waiting": PlayerWaitingEventHandler(),
         "send_next_question": NextQuestionEventHandler(),
-        "question_answered": QuestionAnsweredEventHandler(),
+        "send_question_answered": QuestionAnsweredEventHandler(),
     }
 
     @property
