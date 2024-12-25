@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 class NextQuestionEventHandler(BaseEventHandler):
-    event_type: str = "send_next_question"
+    event_type: str = "next_question"
 
     async def get_next_question(self, room_code: str):
         game = await Game.aget_current_game_for_room(room_code)
