@@ -22,7 +22,7 @@ class NextQuestionEventHandler(BaseEventHandler):
         return new_question
 
     async def handle(self, event: dict, consumer: "RoomConsumer"):
-        token = event.get("token")
+        token = event.get("payload", {}).get("token")
         if not token:
             await consumer.send_error("No token found.")
             return
