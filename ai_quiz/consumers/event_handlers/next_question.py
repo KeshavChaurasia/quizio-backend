@@ -15,8 +15,11 @@ class NextQuestionEventHandler(BaseEventHandler):
 
     async def get_next_question(self, room_code: str):
         game = await Game.aget_current_game_for_room(room_code)
+        if not game:
+            raise ValueError("No game found for the room.")
         game.status = "in_progress"
         await game.asave()
+
         new_question = await game.aget_next_question()
         # TODO: Reset the participant scores to 0
         return new_question
@@ -33,14 +36,17 @@ class NextQuestionEventHandler(BaseEventHandler):
 
         await consumer.send_data_to_user({"success": "Authenticated."})
 
-        question = await self.get_next_question(consumer.room_code)
-        if question is not None:
-            question_serializer = QuestionSerializer(question)
-            await consumer.send_data_to_room(
-                {
-                    "type": self.event_type,
-                    "event": question_serializer.data,
-                }
-            )
-        else:
-            await consumer.send_data_to_room({"type": "all_questions_done"})
+        try:
+            question = await self.get_next_question(consumer.room_code)
+            if question is not None:
+                question_serializer = QuestionSerializer(question)
+                await consumer.send_data_to_room(
+                    {
+                        "type": self.event_type,
+                        "event": question_serializer.data,
+                    }
+                )
+            else:
+                await consumer.send_data_to_room({"type": "all_questions_done"})
+        except ValueError as e:
+            await consumer.send_error(str(e))
