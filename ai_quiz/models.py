@@ -101,7 +101,6 @@ class Game(models.Model):
         return f"{self.id}-{self.status}"
 
     def create_leaderboard(self):
-        print("Creating leaderboard")
         leaderboard = Leaderboard.objects.get_or_create(game=self)
         return leaderboard
 
