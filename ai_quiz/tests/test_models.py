@@ -1,7 +1,15 @@
 from unittest.mock import patch
+
 from django.test import TestCase
 
-from ai_quiz.models import Game, Participant, Question, Room
+from ai_quiz.models import (
+    Game,
+    Leaderboard,
+    Participant,
+    Question,
+    Room,
+    Topic,
+)
 from users.models import GuestUser, User
 
 
@@ -220,3 +228,88 @@ class ParticipantModelTest(TestCase):
             self.room.room_code
         )
         self.assertIn(self.participant.participant_username, participants)
+
+
+class LeaderboardModelTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="testuser", email="test@example.com", password="password123"
+        )
+        self.room = Room.objects.create(host=self.user)
+        self.game = Game.objects.create(room=self.room, status="waiting")
+        self.leaderboard = Leaderboard.objects.create(
+            game=self.game, data={"testuser": 10}
+        )
+
+    def test_create_leaderboard(self):
+        self.assertIsNotNone(self.leaderboard.id)
+        self.assertEqual(self.leaderboard.game, self.game)
+        self.assertEqual(self.leaderboard.data, {"testuser": 10})
+
+    def test_leaderboard_str(self):
+        self.assertEqual(str(self.leaderboard), f"Leaderboard: {self.room.room_code}")
+
+
+class TopicModelTest(TestCase):
+    def setUp(self):
+        self.topic = Topic.objects.create(
+            name="Science", subtopics=["Physics", "Chemistry"]
+        )
+
+    def test_create_topic(self):
+        self.assertIsNotNone(self.topic.id)
+        self.assertEqual(self.topic.name, "Science")
+        self.assertEqual(self.topic.subtopics, ["Physics", "Chemistry"])
+
+    def test_topic_str(self):
+        self.assertEqual(str(self.topic), "Science")
+
+
+class QuestionModelTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="testuser", email="test@example.com", password="password123"
+        )
+        self.room = Room.objects.create(host=self.user)
+        self.game = Game.objects.create(room=self.room, status="waiting")
+        self.topic = Topic.objects.create(
+            name="Science", subtopics=["Physics", "Chemistry"]
+        )
+        self.question = Question.objects.create(
+            game=self.game,
+            question="What is the capital of France?",
+            subtopic="Geography",
+            topic=self.topic,
+            options=["Paris", "London", "Berlin", "Madrid"],
+            difficulty="easy",
+            correct_answer="Paris",
+            timer=30,
+        )
+
+    def test_create_question(self):
+        self.assertIsNotNone(self.question.id)
+        self.assertEqual(self.question.game, self.game)
+        self.assertEqual(self.question.question, "What is the capital of France?")
+        self.assertEqual(self.question.subtopic, "Geography")
+        self.assertEqual(self.question.topic, self.topic)
+        self.assertEqual(self.question.options, ["Paris", "London", "Berlin", "Madrid"])
+        self.assertEqual(self.question.difficulty, "easy")
+        self.assertEqual(self.question.correct_answer, "Paris")
+        self.assertEqual(self.question.timer, 30)
+
+    def test_question_str(self):
+        self.assertEqual(
+            str(self.question), f"Q{self.question.id} - What is the capital of France?"
+        )
+
+    def test_get_all_questions_from_game(self):
+        questions, len_questions = Question.get_all_questions_from_game(self.game)
+        self.assertEqual(len_questions, 1)
+        self.assertIn(self.question, questions)
+
+    async def test_aget_all_questions_from_game(self):
+        questions, len_questions = await Question.aget_all_questions_from_game(
+            self.game
+        )
+        self.assertEqual(len_questions, 1)
+        self.assertIn(self.question, questions)

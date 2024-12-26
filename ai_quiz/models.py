@@ -240,22 +240,8 @@ class Leaderboard(models.Model):
     )
     data = models.JSONField(default=dict)  # A dictionary to store rankings
 
-    def update_leaderboard(self):
-        participants = self.game.room.participants.all().order_by("-score")
-        self.data = [
-            {
-                "username": participant.user.username,
-                "score": participant.score,
-                "correct": participant.correct_answers,
-                "wrong": participant.wrong_answers,
-                "skipped": participant.skipped_questions,
-            }
-            for participant in participants
-        ]
-        self.save()
-
     def __str__(self):
-        return f"Leaderboard for Game {self.game.id}"
+        return f"Leaderboard: {self.game.room.room_code}"
 
 
 class Topic(models.Model):
