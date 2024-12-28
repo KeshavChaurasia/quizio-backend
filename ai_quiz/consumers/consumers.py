@@ -75,7 +75,7 @@ class RoomConsumer(AsyncWebsocketConsumer):
             # Handle all events here
             await self.event_handlers[event_type].handle(data, self)
         except KeyError:
-            raise ValueError(f"Invalid event type: {event_type}")
+            await self.send_error(f"Event type {event_type} not found.")
 
     async def send_data_to_room(self, data):
         await self.channel_layer.group_send(
