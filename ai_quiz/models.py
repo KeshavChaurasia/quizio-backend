@@ -34,6 +34,28 @@ class Room(models.Model):
     def __str__(self):
         return f"Room {self.room_code} - {self.status}"
 
+    def host_name(self):
+        return self.host.username
+
+    @property
+    @database_sync_to_async
+    def ahost_name(self):
+        return self.host.username
+
+    def end_all_games(self):
+        games = self.games.filter(Q(status="in_progress") | Q(status="waiting"))
+        for game in games:
+            game.status = "aborted"
+            game.save()
+
+    async def aend_all_games(self):
+        games = await database_sync_to_async(self.games.filter)(
+            Q(status="in_progress") | Q(status="waiting")
+        )
+        for game in games:
+            game.status = "aborted"
+            await game.asave()
+
     def get_current_game(self):
         try:
             # TODO: Handle the case where multiple games are found
@@ -50,16 +72,6 @@ class Room(models.Model):
             return self.games.filter(
                 Q(status="waiting") | Q(status="in_progress")
             ).first()
-
-    def end_game(self):
-        if self.games.filter(status="in_progress").exists():
-            game: "Game" = self.games.get(status="in_progress")
-            game.status = "finished"
-            game.ended_at = timezone.now()
-            game.save()
-            return game
-        else:
-            raise ValueError("No game in progress to end.")
 
     def save(self, *args, **kwargs):
         if not self.room_code:  # Generate only if room_code is not set
@@ -84,6 +96,7 @@ class Game(models.Model):
         ("waiting", "Waiting"),
         ("in_progress", "In Progress"),
         ("finished", "Finished"),
+        ("aborted", "Aborted"),
     ]
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     room = models.ForeignKey(
@@ -120,7 +133,6 @@ class Game(models.Model):
             self.current_question += 1
             if self.current_question == len_questions:
                 is_last_question = True
-                self.end_game()
             self.save()
             return new_question, is_last_question
         self.end_game()
@@ -240,6 +252,11 @@ class Participant(models.Model):
 
     @property
     def participant_username(self):
+        return self.user.username if self.user else self.guest_user.username
+
+    @property
+    @database_sync_to_async
+    def aparticipant_username(self):
         return self.user.username if self.user else self.guest_user.username
 
 

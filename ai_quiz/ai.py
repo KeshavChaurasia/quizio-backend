@@ -163,6 +163,7 @@ async def generate_questions(
     difficulty: str,
     **kwargs,
 ) -> TriviaGenerator:
+    logger.info(f"Generating questions for topic: {topic}")
     if settings.ENABLE_OPENAI:
         quiz_chain = (QUESTION_GENERATOR_PROMPT | QUESTION_LLM) | YamlOutputParser(
             pydantic_object=TriviaGenerator

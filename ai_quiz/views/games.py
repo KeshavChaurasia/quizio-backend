@@ -160,6 +160,7 @@ class StartGameView(APIView):
                 )
 
             game: Game = room.get_current_game()
+            # TODO: Think if I need to create the leaderboard here instead
             game.status = "in_progress"
             game.save()
             room.status = "active"
@@ -178,33 +179,26 @@ class EndGameView(APIView):
     def post(self, request, *args, **kwargs):
         """End the game."""
         room_code = request.data.get("roomCode")
-        game_id = request.data.get("gameId")
-        if not room_code or not game_id:
+        if not room_code:
             return Response(
-                {"error": "roomCode and gameId required"},
+                {"error": "roomCode required"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         # Check if the room exists
-        try:
-            room = Room.objects.get(room_code=room_code)
-        except Room.DoesNotExist:
+        game = Game.get_current_game_for_room(room_code)
+        if game is None:
             return Response(
-                {"error": "Room not found."}, status=status.HTTP_404_NOT_FOUND
+                {"error": "No active games found."}, status=status.HTTP_404_NOT_FOUND
             )
 
         # Check if the requesting user is the host
-        if room.host != request.user:
+        if game.room.host != request.user:
             return Response(
                 {"error": "Only the host can end the game."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
         # End the game (e.g., setting a game state, etc.)
-        try:
-            room.end_game()
-        except ValueError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        # Get the game instances that are in progress and end them
-
+        game.end_game()
         return Response({"status": "game_ended"}, status=status.HTTP_200_OK)

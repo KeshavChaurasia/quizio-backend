@@ -42,6 +42,9 @@ class CreateRoomView(APIView):
         room = Room.objects.filter(Q(status="active") | Q(status="waiting"), host=user)
         if room.exists():
             room = room.first()
+            # End all previous games
+            room.end_all_games()
+
             qr_code = generate_qr_code(room.room_code)
             response_data = {
                 "roomId": room.room_id,

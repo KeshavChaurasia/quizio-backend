@@ -5,3 +5,4 @@ from .question_answered import QuestionAnsweredEventHandler
 from .leaderboard_update import LeaderboardUpdateEventHandler
 from .player_list import PlayerListEventHandler
 from .host_starting_game import HostStartingGameEventHandler
+from .host_ending_game import HostEndingGameEventHandler

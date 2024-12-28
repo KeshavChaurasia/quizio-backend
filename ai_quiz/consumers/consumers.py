@@ -3,7 +3,7 @@ import logging
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.db.models import Q
-
+from channels.db import database_sync_to_async
 from ai_quiz.consumers.event_handlers import (
     HostStartingGameEventHandler,
     LeaderboardUpdateEventHandler,
@@ -12,6 +12,7 @@ from ai_quiz.consumers.event_handlers import (
     PlayerReadyEventHandler,
     PlayerWaitingEventHandler,
     QuestionAnsweredEventHandler,
+    HostEndingGameEventHandler,
 )
 from ai_quiz.models import Participant, Room
 
@@ -29,6 +30,7 @@ class RoomConsumer(AsyncWebsocketConsumer):
         "send_leaderboard_update": LeaderboardUpdateEventHandler(),
         "send_all_players": PlayerListEventHandler(),
         "send_host_starting_game": HostStartingGameEventHandler(),
+        "send_host_ending_game": HostEndingGameEventHandler(),
     }
 
     @property
@@ -52,7 +54,10 @@ class RoomConsumer(AsyncWebsocketConsumer):
     async def disconnect(self, close_code):
         if self.username:
             await self.send_data_to_room(
-                {"type": "player_disconnected", "payload": {"username": self.username}}
+                {
+                    "type": "player_disconnected",
+                    "payload": {"username": self.username},
+                }
             )
             participant = await Participant.aget_participant_by_username(
                 username=self.username, room__room_code=self.room_code
@@ -62,6 +67,13 @@ class RoomConsumer(AsyncWebsocketConsumer):
                     f"Participant not found: {self.username} while disconnecting."
                 )
             else:
+                room = await Room.objects.aget(room_code=self.room_code)
+                participant_username = await participant.aparticipant_username
+                host_username = await room.ahost_name
+                if participant_username == host_username:
+                    await self.send_data_to_room(
+                        {"type": "host_ended_game", "payload": {}}
+                    )
                 await participant.adelete()
             await self.send_all_player_names()
         await self.channel_layer.group_discard(self.room_code, self.channel_name)
