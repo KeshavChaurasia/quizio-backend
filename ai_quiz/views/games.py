@@ -44,6 +44,7 @@ class CreateGameView(AsyncAPIView):
     async def create_game(self, room, topic, n, difficulty):
         """Create a new game object associated with the room."""
         game = await Game.objects.acreate(room=room, status="waiting")
+        await database_sync_to_async(game.create_leaderboard)()
         subtopics = await generate_subtopics(topic)
         await self._fetch_and_create_questions(
             game=game,
@@ -121,7 +122,6 @@ class CreateGameView(AsyncAPIView):
                 },
                 status=status.HTTP_200_OK,
             )
-
         game_id = await self.create_game(room, topic, n, difficulty)
         response_data = {
             "gameId": game_id,
@@ -160,7 +160,6 @@ class StartGameView(APIView):
                 )
 
             game: Game = room.get_current_game()
-            game.create_leaderboard()
             game.status = "in_progress"
             game.save()
             room.status = "active"

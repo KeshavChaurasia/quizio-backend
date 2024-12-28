@@ -1,7 +1,5 @@
-import asyncio
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock, patch
-from ai_quiz.models import Game, Participant
 from ai_quiz.consumers.event_handlers.player_waiting import PlayerWaitingEventHandler
 
 

@@ -1,7 +1,6 @@
-import asyncio
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock, MagicMock, patch
-from ai_quiz.models import Game, Participant, Question, Leaderboard
+from ai_quiz.models import Question
 from ai_quiz.consumers.event_handlers.question_answered import (
     QuestionAnsweredEventHandler,
 )

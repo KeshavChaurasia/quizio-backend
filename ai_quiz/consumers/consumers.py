@@ -5,12 +5,13 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from django.db.models import Q
 
 from ai_quiz.consumers.event_handlers import (
+    HostStartingGameEventHandler,
+    LeaderboardUpdateEventHandler,
     NextQuestionEventHandler,
+    PlayerListEventHandler,
     PlayerReadyEventHandler,
     PlayerWaitingEventHandler,
     QuestionAnsweredEventHandler,
-    LeaderboardUpdateEventHandler,
-    PlayerListEventHandler,
 )
 from ai_quiz.models import Participant, Room
 
@@ -27,6 +28,7 @@ class RoomConsumer(AsyncWebsocketConsumer):
         "send_question_answered": QuestionAnsweredEventHandler(),
         "send_leaderboard_update": LeaderboardUpdateEventHandler(),
         "send_all_players": PlayerListEventHandler(),
+        "send_host_starting_game": HostStartingGameEventHandler(),
     }
 
     @property
