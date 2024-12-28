@@ -109,15 +109,19 @@ class Game(models.Model):
     def get_next_question(self):
         questions = self.questions.all()
         len_questions = len(questions)
+        is_last_question = False
         if not len_questions:
             return None
         if self.current_question < len_questions:
             new_question = questions[self.current_question]
             self.current_question += 1
+            if self.current_question == len_questions:
+                is_last_question = True
+                self.end_game()
             self.save()
-            return new_question
+            return new_question, is_last_question
         self.end_game()
-        return None
+        return None, is_last_question
 
     def end_game(self):
         self.status = "finished"

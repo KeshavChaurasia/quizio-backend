@@ -20,9 +20,9 @@ class NextQuestionEventHandler(BaseEventHandler):
         game.status = "in_progress"
         await game.asave()
 
-        new_question = await game.aget_next_question()
+        new_question, is_last_question = await game.aget_next_question()
         # TODO: Reset the participant scores to 0
-        return new_question
+        return new_question, is_last_question
 
     async def handle(self, event: dict, consumer: "RoomConsumer"):
         token = event.get("payload", {}).get("token")
@@ -37,13 +37,18 @@ class NextQuestionEventHandler(BaseEventHandler):
         await consumer.send_data_to_user({"success": "Authenticated."})
 
         try:
-            question = await self.get_next_question(consumer.room_code)
+            question, is_last_question = await self.get_next_question(
+                consumer.room_code
+            )
             if question is not None:
                 question_serializer = QuestionSerializer(question)
                 await consumer.send_data_to_room(
                     {
                         "type": self.event_type,
-                        "payload": question_serializer.data,
+                        "payload": {
+                            **question_serializer.data,
+                            "is_last_question": is_last_question,
+                        },
                     }
                 )
             else:
