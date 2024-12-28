@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 
 class LeaderboardUpdateEventHandler(BaseEventHandler):
-    async def handle(self, event, consumer):
+    async def handle(self, event, consumer: "RoomConsumer"):
         game = await Game.aget_current_game_for_room(consumer.room_code)
         try:
             leaderboard = await Leaderboard.objects.aget(game=game)
