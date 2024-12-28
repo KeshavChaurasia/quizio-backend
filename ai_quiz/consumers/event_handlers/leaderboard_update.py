@@ -14,7 +14,7 @@ class LeaderboardUpdateEventHandler(BaseEventHandler):
         try:
             leaderboard = await Leaderboard.objects.aget(game=game)
         except Leaderboard.DoesNotExist:
-            self.consumer.send_error("Leaderboard not found.")
+            await consumer.send_error("Leaderboard not found.")
             return
         await consumer.send_data_to_room(
             {
