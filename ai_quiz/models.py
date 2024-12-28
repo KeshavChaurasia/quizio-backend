@@ -36,6 +36,7 @@ class Room(models.Model):
 
     def get_current_game(self):
         try:
+            # TODO: Handle the case where multiple games are found
             waiting_game = self.games.get(Q(status="waiting") | Q(status="in_progress"))
             try:
                 waiting_game.leaderboard
@@ -46,7 +47,9 @@ class Room(models.Model):
             raise ValueError("Create a game before starting.")
         except Game.MultipleObjectsReturned:
             # Handle the case where multiple games are found
-            raise ValueError("Multiple games with status 'waiting' found.")
+            return self.games.filter(
+                Q(status="waiting") | Q(status="in_progress")
+            ).first()
 
     def end_game(self):
         if self.games.filter(status="in_progress").exists():
