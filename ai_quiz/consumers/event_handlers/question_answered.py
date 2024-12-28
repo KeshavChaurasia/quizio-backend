@@ -26,6 +26,9 @@ class QuestionAnsweredEventHandler(BaseEventHandler):
 
         try:
             game = await Game.aget_current_game_for_room(consumer.room_code)
+            if not game:
+                await consumer.send_error("No game found for the room.")
+                return
             current_question = await game.questions.aget(id=question_id)
         except Question.DoesNotExist:
             await consumer.send_error(f"Invalid question id: {question_id}")
