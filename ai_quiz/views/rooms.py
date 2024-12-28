@@ -44,7 +44,11 @@ class CreateRoomView(APIView):
             room = room.first()
             # End all previous games
             room.end_all_games()
-
+            participant, _ = Participant.objects.get_or_create(
+                user=request.user, room=room
+            )
+            participant.status = "ready"
+            participant.save()
             qr_code = generate_qr_code(room.room_code)
             response_data = {
                 "roomId": room.room_id,
