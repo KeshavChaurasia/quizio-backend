@@ -43,7 +43,7 @@ class CreateRoomView(APIView):
         if room.exists():
             room = room.first()
             # End all previous games
-            room.end_all_games()
+            # room.end_all_games()
             participant, _ = Participant.objects.get_or_create(
                 user=request.user, room=room
             )
