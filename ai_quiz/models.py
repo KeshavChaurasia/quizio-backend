@@ -101,7 +101,11 @@ class Game(models.Model):
         return f"{self.id}-{self.status}"
 
     def create_leaderboard(self):
-        leaderboard = Leaderboard.objects.get_or_create(game=self)
+        participants = self.room.participants.all()
+        leaderboard_data = {p.participant_username: 0 for p in participants}
+        leaderboard = Leaderboard.objects.get_or_create(
+            game=self, data=leaderboard_data
+        )
         return leaderboard
 
     def get_next_question(self):

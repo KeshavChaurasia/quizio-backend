@@ -11,6 +11,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 
+from users.models import Profile
 from users.serializers import (
     ProfileSerializer,
     UserSerializer,
@@ -55,6 +56,7 @@ def register_user(request):
             email=data["email"],
             password=make_password(data["password"]),
         )
+        Profile.objects.get_or_create(user=user)
         return Response(
             {"message": "User registered successfully"},
             status=status.HTTP_201_CREATED,

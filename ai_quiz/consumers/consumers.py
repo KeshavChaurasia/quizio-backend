@@ -9,6 +9,7 @@ from ai_quiz.consumers.event_handlers import (
     PlayerReadyEventHandler,
     PlayerWaitingEventHandler,
     QuestionAnsweredEventHandler,
+    LeaderboardUpdateEventHandler,
 )
 from ai_quiz.models import Participant, Room
 
@@ -23,6 +24,8 @@ class RoomConsumer(AsyncWebsocketConsumer):
         "player_waiting": PlayerWaitingEventHandler(),
         "send_next_question": NextQuestionEventHandler(),
         "send_question_answered": QuestionAnsweredEventHandler(),
+        "send_leaderboard_update": LeaderboardUpdateEventHandler(),
+        # "send_all_players": PlayerListEventHandler(),
     }
 
     @property

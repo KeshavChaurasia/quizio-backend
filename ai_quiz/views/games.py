@@ -159,7 +159,7 @@ class StartGameView(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            game = room.get_current_game()
+            game: Game = room.get_current_game()
             game.create_leaderboard()
             game.status = "in_progress"
             game.save()
