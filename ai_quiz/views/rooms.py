@@ -74,7 +74,7 @@ class CreateRoomView(APIView):
             },
             "ws": f"/rooms/{room_code}",  # WebSocket URL with token
         }
-        Participant.objects.create(user=request.user, room=room).save()
+        Participant.objects.create(user=request.user, room=room, status="ready").save()
         return Response(response_data, status=status.HTTP_201_CREATED)
 
 

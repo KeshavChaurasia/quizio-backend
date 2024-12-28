@@ -51,12 +51,11 @@ def register_user(request):
                 {"error": "Email already exists"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        user = User.objects.create(
+        user = User.objects.create_user(
             username=data["username"],
             email=data["email"],
             password=make_password(data["password"]),
         )
-        Profile.objects.get_or_create(user=user)
         return Response(
             {"message": "User registered successfully"},
             status=status.HTTP_201_CREATED,
