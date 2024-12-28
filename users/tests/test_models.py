@@ -26,11 +26,15 @@ class UserModelTest(TestCase):
 class ProfileModelTest(TestCase):
     def test_create_profile(self):
         user = User.objects.create_user(
-            username="testuser", email="test@example.com", password="password123"
+            username="testuser",
+            email="test@example.com",
+            password="password123",
+            profile_fields={
+                "bio": "This is a bio",
+                "avatar": "http://example.com/avatar.jpg",
+            },
         )
-        profile = Profile.objects.create(
-            user=user, bio="This is a bio", avatar="http://example.com/avatar.jpg"
-        )
+        profile: Profile = user.profile
         self.assertEqual(profile.user, user)
         self.assertEqual(profile.bio, "This is a bio")
         self.assertEqual(profile.avatar, "http://example.com/avatar.jpg")
@@ -39,7 +43,5 @@ class ProfileModelTest(TestCase):
         user = User.objects.create_user(
             username="testuser", email="test@example.com", password="password123"
         )
-        profile = Profile.objects.create(
-            user=user, bio="This is a bio", avatar="http://example.com/avatar.jpg"
-        )
+        profile = user.profile
         self.assertEqual(str(profile), "testuser's profile")

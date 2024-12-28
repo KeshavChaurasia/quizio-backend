@@ -3,11 +3,22 @@ from django.contrib.auth.models import AbstractUser
 import uuid
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
+from django.contrib.auth.models import UserManager as Manager
+
+
+class UserManager(Manager):
+    def create_user(self, username, email=None, password=None, **extra_fields):
+        profile_fields = extra_fields.pop("profile_fields", {})
+        user = super().create_user(username, email, password, **extra_fields)
+        Profile.objects.create(user=user, **profile_fields)
+        return user
 
 
 class User(AbstractUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(unique=True)
+
+    objects = UserManager()
 
     def clean(self):
         super().clean()
