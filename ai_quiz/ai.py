@@ -159,7 +159,6 @@ async def generate_questions(
     subtopics: list[str],
     n: int,
     difficulty: str,
-    n_questions: int,
     **kwargs,
 ) -> TriviaGenerator:
     quiz_chain = (QUESTION_GENERATOR_PROMPT | QUESTION_LLM) | YamlOutputParser(
@@ -172,11 +171,11 @@ async def generate_questions(
         {
             "topic": topic,
             "subtopics": subtopics,
-            "n": n_questions,
+            "n": n,
             "difficulty": difficulty,
         }
     )
-    logger.info(f"Generated {n_questions} questions: {questions.questions}")
+    logger.info(f"Generated {n} questions: {questions.questions}")
     return questions
     # return TriviaGenerator(
     #     thoughts="",
