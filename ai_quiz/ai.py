@@ -8,6 +8,7 @@ from langchain_openai import ChatOpenAI
 
 logger = logging.getLogger(__name__)
 from pydantic import BaseModel
+import quizio.settings as settings
 
 
 class TopicGenerator(BaseModel):
@@ -127,31 +128,32 @@ QUESTION_LLM = ChatOpenAI(
 
 
 async def generate_subtopics(topic: str) -> TopicGenerator:
-    topic_chain = (
-        TOPIC_GENERATOR_PROMPT
-        | TOPIC_LLM
-        | YamlOutputParser(pydantic_object=TopicGenerator)
+    if settings.ENABLE_OPENAI:
+        topic_chain = (
+            TOPIC_GENERATOR_PROMPT
+            | TOPIC_LLM
+            | YamlOutputParser(pydantic_object=TopicGenerator)
+        )
+        logger.info(f"Generating subtopics for topic: {topic}")
+        subtopics: TopicGenerator = topic_chain.invoke({"topic": topic})
+        logger.info(f"Generated subtopics: {subtopics.subtopics}")
+        return subtopics
+    return TopicGenerator(
+        thoughts="",
+        topic="Nepal",
+        subtopics=[
+            "Geography",
+            "Culture",
+            "History",
+            "Mountains",
+            "Religion",
+            "Food",
+            "Tourism",
+            "Wildlife",
+            "People",
+            "Economy",
+        ],
     )
-    logger.info(f"Generating subtopics for topic: {topic}")
-    subtopics: TopicGenerator = topic_chain.invoke({"topic": topic})
-    logger.info(f"Generated subtopics: {subtopics.subtopics}")
-    return subtopics
-    # return TopicGenerator(
-    #     thoughts="",
-    #     topic="Nepal",
-    #     subtopics=[
-    #         "Geography",
-    #         "Culture",
-    #         "History",
-    #         "Mountains",
-    #         "Religion",
-    #         "Food",
-    #         "Tourism",
-    #         "Wildlife",
-    #         "People",
-    #         "Economy",
-    #     ],
-    # )
 
 
 async def generate_questions(
@@ -161,48 +163,49 @@ async def generate_questions(
     difficulty: str,
     **kwargs,
 ) -> TriviaGenerator:
-    quiz_chain = (QUESTION_GENERATOR_PROMPT | QUESTION_LLM) | YamlOutputParser(
-        pydantic_object=TriviaGenerator
+    if settings.ENABLE_OPENAI:
+        quiz_chain = (QUESTION_GENERATOR_PROMPT | QUESTION_LLM) | YamlOutputParser(
+            pydantic_object=TriviaGenerator
+        )
+        # Shuffle the subtopics randomly for variety
+        random.shuffle(subtopics)
+        logger.info(f"Generating {n} questions for topic: {topic}")
+        questions = await quiz_chain.ainvoke(
+            {
+                "topic": topic,
+                "subtopics": subtopics,
+                "n": n,
+                "difficulty": difficulty,
+            }
+        )
+        logger.info(f"Generated {n} questions: {questions.questions}")
+        return questions
+    return TriviaGenerator(
+        thoughts="",
+        topic="Nepal",
+        difficulty="easy",
+        n=1,
+        questions=[
+            Question(
+                subtopic="Geography",
+                question="What is the capital of Nepal?",
+                answer="Kathmandu",
+                options=["Kathmandu", "Pokhara", "Bhaktapur", "Lalitpur"],
+            ),
+            Question(
+                subtopic="test2",
+                question="test2?",
+                answer="test2",
+                options=["test2", "Pokhara", "Bhaktapur", "Lalitpur"],
+            ),
+            Question(
+                subtopic="test3",
+                question="test3?",
+                answer="test3",
+                options=["test3", "Pokhara", "Bhaktapur", "Lalitpur"],
+            ),
+        ],
     )
-    # Shuffle the subtopics randomly for variety
-    random.shuffle(subtopics)
-    logger.info(f"Generating {n} questions for topic: {topic}")
-    questions = await quiz_chain.ainvoke(
-        {
-            "topic": topic,
-            "subtopics": subtopics,
-            "n": n,
-            "difficulty": difficulty,
-        }
-    )
-    logger.info(f"Generated {n} questions: {questions.questions}")
-    return questions
-    # return TriviaGenerator(
-    #     thoughts="",
-    #     topic="Nepal",
-    #     difficulty="easy",
-    #     n=1,
-    #     questions=[
-    #         Question(
-    #             subtopic="Geography",
-    #             question="What is the capital of Nepal?",
-    #             answer="Kathmandu",
-    #             options=["Kathmandu", "Pokhara", "Bhaktapur", "Lalitpur"],
-    #         ),
-    #         Question(
-    #             subtopic="test2",
-    #             question="test2?",
-    #             answer="test2",
-    #             options=["test2", "Pokhara", "Bhaktapur", "Lalitpur"],
-    #         ),
-    #         Question(
-    #             subtopic="test3",
-    #             question="test3?",
-    #             answer="test3",
-    #             options=["test3", "Pokhara", "Bhaktapur", "Lalitpur"],
-    #         ),
-    #     ],
-    # )
 
 
 if __name__ == "__main__":

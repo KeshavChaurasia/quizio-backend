@@ -180,3 +180,4 @@ CHANNEL_LAYERS = {
 
 if DEBUG:
     CORS_ALLOW_ALL_ORIGINS = True
+ENABLE_OPENAI = os.environ.get("ENABLE_OPENAI", False)
