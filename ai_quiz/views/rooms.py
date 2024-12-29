@@ -27,6 +27,22 @@ class CreateRoomView(APIView):
         IsAuthenticated
     ]  # Ensure only authenticated users can create a room
 
+    def _get_response(self, room: Room, user, created: bool = False):
+        qr_code = generate_qr_code(room.room_code)
+        response_data = {
+            "roomId": room.room_id,
+            "roomCode": room.room_code,
+            "qrCode": qr_code,
+            "host": {
+                "userId": f"host-{user.id}",
+                "userName": user.username,
+                "role": "host",
+            },
+            "ws": f"/rooms/{room.room_code}",  # WebSocket URL with token
+        }
+        response_status = status.HTTP_200_OK if not created else status.HTTP_201_CREATED
+        return Response(response_data, status=response_status)
+
     @swagger_auto_schema(
         request_body=CreateRoomRequestSerializer,
         responses={
@@ -49,40 +65,13 @@ class CreateRoomView(APIView):
             )
             participant.status = "ready"
             participant.save()
-            qr_code = generate_qr_code(room.room_code)
-            response_data = {
-                "roomId": room.room_id,
-                "roomCode": room.room_code,
-                "qrCode": qr_code,
-                "host": {
-                    "userId": f"host-{user.id}",
-                    "userName": user.username,
-                    "role": "host",
-                },
-                "ws": f"/rooms/{room.room_code}",  # WebSocket URL with token
-            }
-            return Response(response_data, status=status.HTTP_200_OK)
+
+            return self._get_response(room, user)
         # Create a new room for the host
         room = Room.objects.create(host=user, status="waiting")
 
-        # Generate the join link and QR code
-        room_code = room.room_code
-        qr_code = generate_qr_code(room_code)
-
-        # Construct the response data
-        response_data = {
-            "roomId": room.room_id,
-            "roomCode": room_code,
-            "qrCode": qr_code,
-            "host": {
-                "userId": f"host-{user.id}",
-                "userName": user.username,
-                "role": "host",
-            },
-            "ws": f"/rooms/{room_code}",  # WebSocket URL with token
-        }
         Participant.objects.create(user=request.user, room=room, status="ready")
-        return Response(response_data, status=status.HTTP_201_CREATED)
+        return self._get_response(room, user, created=True)
 
 
 class JoinRoomView(APIView):
