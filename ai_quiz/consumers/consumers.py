@@ -3,7 +3,6 @@ import logging
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.db.models import Q
-from channels.db import database_sync_to_async
 from ai_quiz.consumers.event_handlers import (
     HostStartingGameEventHandler,
     LeaderboardUpdateEventHandler,

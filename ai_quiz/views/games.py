@@ -9,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from ai_quiz.ai import generate_questions, generate_subtopics
-from ai_quiz.models import Game, Question, Room, Topic
+from ai_quiz.models import Game, Participant, Question, Room, Topic
 from ai_quiz.serializers import (
     CreateGameRequestSerializer,
     CreateGameResponseSerializer,
@@ -25,7 +25,7 @@ class CreateGameView(AsyncAPIView):
     permission_classes = [IsAuthenticated]
 
     @database_sync_to_async
-    def validate_room(self, user):
+    def validate_room(self, user) -> Room | None:
         """Validate the room code and return the room object."""
         try:
             room = user.hosted_rooms.get(Q(status="active") | Q(status="waiting"))
@@ -36,7 +36,7 @@ class CreateGameView(AsyncAPIView):
     async def validate_game(self, room: Room):
         """Validate if a game is already in progress."""
         try:
-            game = await Game.objects.aget(room=room, status="in_progress")
+            game = await Game.aget_current_game_for_room(room.room_code)
             return game
         except Game.DoesNotExist:
             return None
@@ -106,22 +106,16 @@ class CreateGameView(AsyncAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         # Check if the room exists
-        room = await self.validate_room(request.user)
+        room: Room = await self.validate_room(request.user)
         if room is None:
             return Response(
                 {"error": "No active rooms found for user."},
                 status=status.HTTP_404_NOT_FOUND,
             )
-        game = await self.validate_game(room)
-
-        # There is already a game in progress
-        if game is not None:
-            return Response(
-                {
-                    "gameId": game.id,
-                },
-                status=status.HTTP_200_OK,
-            )
+        await room.aend_all_games()
+        await Participant.objects.aget_or_create(
+            room=room, user=request.user, status="ready"
+        )
         game_id = await self.create_game(room, topic, n, difficulty)
         response_data = {
             "gameId": game_id,

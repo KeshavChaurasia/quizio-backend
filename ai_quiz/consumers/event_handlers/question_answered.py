@@ -17,11 +17,9 @@ class QuestionAnsweredEventHandler(BaseEventHandler):
             await consumer.send_error("Username is required.")
             return
         question_id = data.get("payload", {}).get("questionId")
-        answer = data.get("payload", {}).get("answer")
-        if not question_id or not answer:
-            await consumer.send_data_to_user(
-                {"error": "questionId and answer are required."}
-            )
+        answer = data.get("payload", {}).get("submittedAnswer")
+        if not question_id:
+            await consumer.send_data_to_user({"error": "questionId is required."})
             return
 
         try:
@@ -34,15 +32,26 @@ class QuestionAnsweredEventHandler(BaseEventHandler):
             await consumer.send_error(f"Invalid question id: {question_id}")
             return
 
-        participant = await Participant.aget_participant_by_username(
+        participant: Participant = await Participant.aget_participant_by_username(
             username=username, room__room_code=consumer.room_code
         )
         if not participant:
             await consumer.send_error("Participant not found.")
             return
         leaderboard, _ = await Leaderboard.objects.aget_or_create(game=game)
-
-        if current_question.correct_answer == answer:
+        if not answer:
+            participant.skipped_questions += 1
+            await consumer.send_data_to_user(
+                {
+                    "type": "answer_validation",
+                    "payload": {
+                        "submittedAnswer": answer,
+                        "isCorrect": False,
+                        "correctAnswer": current_question.correct_answer,
+                    },
+                }
+            )
+        elif current_question.correct_answer == answer:
             # TODO: Separate out the participant correct answers and wrong answers variables to leaderboard
             participant.correct_answers += 1
             participant.score += 1  # TODO: Update the score based on the timestamp
@@ -51,7 +60,11 @@ class QuestionAnsweredEventHandler(BaseEventHandler):
             await consumer.send_data_to_user(
                 {
                     "type": "answer_validation",
-                    "payload": {"answer": answer, "isCorrect": True},
+                    "payload": {
+                        "submittedAnswer": answer,
+                        "isCorrect": True,
+                        "correctAnswer": current_question.correct_answer,
+                    },
                 }
             )
         else:
@@ -59,7 +72,11 @@ class QuestionAnsweredEventHandler(BaseEventHandler):
             await consumer.send_data_to_user(
                 {
                     "type": "answer_validation",
-                    "payload": {"answer": answer, "isCorrect": False},
+                    "payload": {
+                        "submittedAnswer": answer,
+                        "isCorrect": False,
+                        "correctAnswer": current_question.correct_answer,
+                    },
                 }
             )
         await consumer.send_data_to_room(

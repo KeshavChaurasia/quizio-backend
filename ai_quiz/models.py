@@ -49,12 +49,7 @@ class Room(models.Model):
             game.save()
 
     async def aend_all_games(self):
-        games = await database_sync_to_async(self.games.filter)(
-            Q(status="in_progress") | Q(status="waiting")
-        )
-        for game in games:
-            game.status = "aborted"
-            await game.asave()
+        return await database_sync_to_async(self.end_all_games)()
 
     def get_current_game(self):
         try:
@@ -161,14 +156,13 @@ class Game(models.Model):
 
     @staticmethod
     async def aget_current_game_for_room(room_code: str):
-        try:
-            game = await Game.objects.aget(
-                Q(status="in_progress") | Q(status="waiting"),
-                room__room_code=room_code,
-            )
-            return game
-        except (Game.DoesNotExist, Game.MultipleObjectsReturned):
-            return None
+        game = await database_sync_to_async(Game.objects.filter)(
+            Q(status="in_progress") | Q(status="waiting"),
+            room__room_code=room_code,
+        )
+        if await game.aexists():
+            return await game.afirst()
+        return None
 
 
 class Participant(models.Model):
