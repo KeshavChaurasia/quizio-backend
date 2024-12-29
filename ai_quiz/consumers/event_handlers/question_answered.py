@@ -12,6 +12,7 @@ class QuestionAnsweredEventHandler(BaseEventHandler):
     event_type: str = "question_answered"
 
     async def handle(self, data, consumer: "RoomConsumer"):
+        # TODO: Currently, the frontend can send many answers for the same question. We need to handle this.
         username = consumer.username
         if not username:
             await consumer.send_error("Username is required.")
