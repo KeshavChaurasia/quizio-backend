@@ -111,9 +111,20 @@ class Game(models.Model):
     def __str__(self):
         return f"{self.id}-{self.status}"
 
-    def create_leaderboard(self):
+    def _reset_all_participant_scores(self):
         participants = self.room.participants.all()
-        leaderboard_data = {p.participant_username: 0 for p in participants}
+        for p in participants:
+            p.score = 0
+            p.correct_answers = 0
+            p.wrong_answers = 0
+            p.skipped_questions = 0
+            p.status = "waiting"
+            p.save()
+        return participants
+
+    def create_leaderboard(self):
+        participants = self._reset_all_participant_scores()
+        leaderboard_data = {p.participant_username: p.score for p in participants}
         leaderboard = Leaderboard.objects.create(game=self, data=leaderboard_data)
         return leaderboard
 
