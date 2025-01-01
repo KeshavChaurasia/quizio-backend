@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 class QuestionAnsweredEventHandler(BaseEventHandler):
     event_type: str = "question_answered"
 
+    # TODO: Send all_players_answered event to the host
     async def _handle_leaderboard_update(
         self,
         participant: Participant,
@@ -62,6 +63,9 @@ class QuestionAnsweredEventHandler(BaseEventHandler):
             )
         await participant.asave()
         await leaderboard.asave()
+        # TODO: Handle the case where the user leaves the room in the middle; we need to clear
+        # the leaderboard and remove the participant
+        print(leaderboard.data.keys())
 
     async def handle(self, data, consumer: "RoomConsumer"):
         # TODO: Currently, the frontend can send many answers for the same question. We need to handle this.

@@ -30,6 +30,7 @@ class RoomConsumer(AsyncWebsocketConsumer):
         "send_all_players": PlayerListEventHandler(),
         "send_host_starting_game": HostStartingGameEventHandler(),
         "send_host_ending_game": HostEndingGameEventHandler(),
+        # TODO: Add player kick event
     }
 
     @property
