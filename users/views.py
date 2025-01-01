@@ -53,7 +53,7 @@ def register_user(request):
         user = User.objects.create_user(
             username=data["username"],
             email=data["email"],
-            password=make_password(data["password"]),
+            password=data["password"],
         )
         return Response(
             {"message": "User registered successfully"},
