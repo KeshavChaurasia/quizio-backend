@@ -255,8 +255,8 @@ class Participant(models.Model):
         return [
             {
                 "username": await p.aparticipant_username,
-                "avatar_style": p.avatar_style,
-                "avatar_seed": p.avatar_seed,
+                "avatarStyle": p.avatar_style,
+                "avatarSeed": p.avatar_seed,
                 "status": p.status,
             }
             async for p in Participant.objects.filter(

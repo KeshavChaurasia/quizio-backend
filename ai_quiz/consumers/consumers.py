@@ -1,6 +1,5 @@
 import json
 import logging
-
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.db.models import Q
 from ai_quiz.consumers.event_handlers import (
