@@ -134,7 +134,7 @@ class JoinRoomView(APIView):
         response_data = {
             **data,
             "roomId": room.room_id,
-            "role": "participant" if request.user == room.host else "host",
+            "role": "participant" if request.user != room.host else "host",
             "ws": f"/rooms/{room.room_code}",
         }
 
