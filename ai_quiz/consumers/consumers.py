@@ -61,9 +61,9 @@ class RoomConsumer(AsyncWebsocketConsumer):
         participant = await Participant.aget_participant_by_username(
             username=username, room__room_code=self.room_code
         )
-        logger.debug(f"username: {username}, room_code: {self.room_code}")
+
         if participant is None:
-            logger.debug(f"Participant not found: {username} while disconnecting.")
+            logger.warning(f"Participant not found: {username} while disconnecting.")
         else:
             room = await Room.objects.aget(room_code=self.room_code)
             participant_username = await participant.aparticipant_username

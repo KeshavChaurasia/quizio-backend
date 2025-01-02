@@ -20,6 +20,9 @@ class PlayerReadyEventHandler(BaseEventHandler):
     async def handle(self, event: dict, consumer: "RoomConsumer"):
         username = event.get("payload", {}).get("username")
         if username is None:
+            logger.info(
+                f"Cannot set player as ready. Username is required. payload: {event.get('payload')}"
+            )
             await consumer.send_error("username is required")
             return
 
