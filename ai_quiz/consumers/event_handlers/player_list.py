@@ -10,12 +10,4 @@ if TYPE_CHECKING:
 
 class PlayerListEventHandler(BaseEventHandler):
     async def handle(self, event, consumer: "RoomConsumer"):
-        participants = await Participant.aget_all_participants_from_room(
-            consumer.room_code
-        )
-        await consumer.send_data_to_room(
-            {
-                "type": "all_players",
-                "payload": {"usernames": participants},
-            }
-        )
+        await consumer.send_all_player_names()
