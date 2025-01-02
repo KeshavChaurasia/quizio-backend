@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from ai_quiz.models import Game
+from ai_quiz.models import Game, Question
 from ai_quiz.serializers import QuestionSerializer
 from users.authenticators import aget_authenticated_user
 
@@ -14,14 +14,13 @@ class NextQuestionEventHandler(BaseEventHandler):
     event_type: str = "next_question"
 
     async def get_next_question(self, room_code: str):
-        game = await Game.aget_current_game_for_room(room_code)
+        game: Game = await Game.aget_current_game_for_room(room_code)
         if not game:
             raise ValueError("No game found for the room.")
         game.status = "in_progress"
         await game.asave()
 
         new_question, is_last_question = await game.aget_next_question()
-        # TODO: Reset the participant scores to 0
         return new_question, is_last_question
 
     async def handle(self, event: dict, consumer: "RoomConsumer"):

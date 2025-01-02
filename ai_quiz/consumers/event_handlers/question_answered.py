@@ -18,6 +18,7 @@ class QuestionAnsweredEventHandler(BaseEventHandler):
         consumer: "RoomConsumer",
         current_question: Question,
         leaderboard: Leaderboard,
+        timestamp: int,
     ):
         username = consumer.username
         user_data = leaderboard.data.get(username)
@@ -35,8 +36,10 @@ class QuestionAnsweredEventHandler(BaseEventHandler):
             )
         elif current_question.correct_answer == answer:
             user_data["correct_answers"] = user_data.get("correct_answers", 0) + 1
-            user_data["score"] = user_data.get("score", 0) + 1
-
+            response_time = max(0, timestamp - current_question.updated_at.timestamp())
+            user_data["score"] = user_data.get("score", 0) + max(
+                0, 100 * (1 - (response_time / current_question.time_per_question))
+            )
             await consumer.send_data_to_user(
                 {
                     "type": "answer_validation",
@@ -64,15 +67,18 @@ class QuestionAnsweredEventHandler(BaseEventHandler):
         # the leaderboard and remove the participant
 
     async def handle(self, data, consumer: "RoomConsumer"):
-        # TODO: Currently, the frontend can send many answers for the same question. We need to handle this.
         username = consumer.username
         if not username:
             await consumer.send_error("Username is required.")
             return
-        question_id = data.get("payload", {}).get("questionId")
-        answer = data.get("payload", {}).get("submittedAnswer")
-        if not question_id:
-            await consumer.send_data_to_user({"error": "questionId is required."})
+        payload = data.get("payload", {})
+        question_id = payload.get("questionId")
+        answer = payload.get("submittedAnswer")
+        timestamp = payload.get("timestamp")
+        if not question_id or not timestamp:
+            await consumer.send_data_to_user(
+                {"error": "questionId and timestamp are required."}
+            )
             return
 
         try:
@@ -98,6 +104,7 @@ class QuestionAnsweredEventHandler(BaseEventHandler):
             consumer=consumer,
             current_question=current_question,
             leaderboard=leaderboard,
+            timestamp=timestamp,
         )
 
         await consumer.send_data_to_room(

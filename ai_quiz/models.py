@@ -315,6 +315,7 @@ class Question(models.Model):
         default=30
     )  # Time limit for each question in seconds
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"Q{self.id} - {self.question}"
