@@ -104,8 +104,8 @@ class QuestionAnsweredEventHandler(BaseEventHandler):
             {
                 "type": "leaderboard_update",
                 "payload": [
-                    {"username": username, "score": leaderboard.data[username]}
-                    for username in leaderboard.data
+                    {"username": username, **value}
+                    for username, value in leaderboard.data.items()
                 ],
             }
         )
