@@ -45,4 +45,9 @@ class PlayerReadyEventHandler(BaseEventHandler):
                     },
                 }
             )
+        else:
+            await consumer.send_error(
+                f"Participant with username: {username} not found"
+            )
+            return
         await consumer.send_all_player_names()

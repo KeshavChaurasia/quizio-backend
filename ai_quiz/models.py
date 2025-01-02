@@ -241,7 +241,7 @@ class Participant(models.Model):
         participant = await Participant.aget_participant_by_username(
             username, **additional_filters
         )
-        if participant is not None and participant.status != status:
+        if participant is not None:
             participant.status = status
             await participant.asave()
             return participant
