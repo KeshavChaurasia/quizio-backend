@@ -57,6 +57,7 @@ class CreateGameRequestSerializer(serializers.Serializer):
     subtopics = serializers.ListField(child=serializers.CharField(max_length=100))
     n = serializers.IntegerField()
     difficulty = serializers.CharField(max_length=10)
+    timePerQuestion = serializers.IntegerField()
 
 
 class CreateGameResponseSerializer(serializers.Serializer):

@@ -41,7 +41,9 @@ class CreateGameView(AsyncAPIView):
         except Game.DoesNotExist:
             return None
 
-    async def create_game(self, room, topic, n, difficulty):
+    async def create_game(
+        self, room: Room, topic: str, n, difficulty: str, time_per_question: int = 30
+    ):
         """Create a new game object associated with the room."""
         game = await Game.objects.acreate(room=room, status="waiting")
         await database_sync_to_async(game.create_leaderboard)()
@@ -52,6 +54,7 @@ class CreateGameView(AsyncAPIView):
             subtopics=subtopics.subtopics,
             n=n,
             difficulty=difficulty,
+            time_per_question=time_per_question,
         )
         return game.id
 
@@ -62,6 +65,7 @@ class CreateGameView(AsyncAPIView):
         subtopics: list[str],
         n: int,
         difficulty: str,
+        time_per_question: int = 30,
     ):
         """Fetch questions from the AI backend and create question objects."""
         questions = await generate_questions(
@@ -80,6 +84,7 @@ class CreateGameView(AsyncAPIView):
                     correct_answer=question.answer,
                     options=question.options,
                     topic=topic,
+                    time_per_question=time_per_question,
                 )
                 for question in questions.questions
             ]
@@ -94,17 +99,12 @@ class CreateGameView(AsyncAPIView):
         operation_description="Create a room with a custom serializer",
     )
     async def post(self, request, *args, **kwargs):
-        topic = request.data.get("topic")
-        subtopics = request.data.get("subtopics")
-        n = request.data.get("n", 5)
-        difficulty = request.data.get("difficulty", "easy")
-        if not topic or not subtopics:
+        serializer = CreateGameRequestSerializer(request.data)
+        if not serializer.is_valid():
             return Response(
-                {
-                    "error": "`topic` and `subtopics` are required; `n` and `difficulty` are optional."
-                },
-                status=status.HTTP_400_BAD_REQUEST,
+                {"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
             )
+        data = serializer.validated_data
         # Check if the room exists
         room: Room = await self.validate_room(request.user)
         if room is None:
@@ -116,7 +116,9 @@ class CreateGameView(AsyncAPIView):
         await Participant.objects.aget_or_create(
             room=room, user=request.user, status="ready"
         )
-        game_id = await self.create_game(room, topic, n, difficulty)
+        game_id = await self.create_game(
+            room, data["topic"], data["n"], data["difficulty"], data["timePerQuestion"]
+        )
         response_data = {
             "gameId": game_id,
         }
