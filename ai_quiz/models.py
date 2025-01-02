@@ -309,7 +309,9 @@ class Question(models.Model):
     options = models.JSONField()  # Store options as a JSON list
     difficulty = models.CharField(max_length=10, default="easy")
     correct_answer = models.CharField(max_length=512)
-    timer = models.IntegerField(default=30)  # Time limit for each question in seconds
+    time_per_question = models.IntegerField(
+        default=30
+    )  # Time limit for each question in seconds
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

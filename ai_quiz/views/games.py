@@ -99,7 +99,7 @@ class CreateGameView(AsyncAPIView):
         operation_description="Create a room with a custom serializer",
     )
     async def post(self, request, *args, **kwargs):
-        serializer = CreateGameRequestSerializer(request.data)
+        serializer = CreateGameRequestSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(
                 {"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
