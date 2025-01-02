@@ -10,10 +10,12 @@ from ai_quiz.views import (
     StartSinglePlayerGameAPIView,
     QuestionsAPIView,
     CheckAnswerAPIView,
+    CheckRoomValidView,
 )
 
 urlpatterns = [
     path("rooms/create/", CreateRoomView.as_view(), name="create_room"),
+    path("rooms/valid/", CheckRoomValidView.as_view(), name="check_room_valid"),
     path("rooms/join/", JoinRoomView.as_view(), name="join_room"),
     path("rooms/end/", EndRoomView.as_view(), name="end_room"),
     path("game/create/", CreateGameView.as_view(), name="create_game"),

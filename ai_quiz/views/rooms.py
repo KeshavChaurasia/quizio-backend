@@ -84,57 +84,58 @@ class JoinRoomView(APIView):
     )
     def post(self, request, *args, **kwargs):
         """Allow a participant to join the room."""
-        room_code = request.data.get("roomCode")
-        username = request.data.get("username")
-
-        if not room_code or not username:
+        serializer = JoinRoomRequestSerializer(data=request.data)
+        if not serializer.is_valid():
             return Response(
-                {"error": "roomCode and username are required"},
+                serializer.errors,
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        data = serializer.validated_data
         # Check if the room exists
         try:
             room = Room.objects.get(
-                Q(status="active") | Q(status="waiting"), room_code=room_code
+                Q(status="active") | Q(status="waiting"), room_code=data["roomCode"]
             )
         except Room.DoesNotExist:
             return Response(
                 {"error": "Room not found or has already been closed."},
                 status=status.HTTP_404_NOT_FOUND,
             )
-        if request.user == room.host:
-            return Response(
-                {"error": "Host is already in the room."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
         # Check if the user is a logged in user
         if request.user.is_authenticated:
             user = request.user
         else:
             participant = Participant.get_participant_by_username(
-                username=username, room=room
+                username=data["player"]["username"], room=room
             )
             if participant:
                 return Response(
                     {"error": "Username is already taken."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            user = GuestUser.objects.create(username=username, room=room)
+            user = GuestUser.objects.create(
+                username=data["player"]["username"], room=room
+            )
         # Create a participant object for the user
         if isinstance(user, User):
-            participant = Participant.objects.get_or_create(user=user, room=room)
+            participant, _ = Participant.objects.get_or_create(user=user, room=room)
         else:
-            participant = Participant.objects.get_or_create(guest_user=user, room=room)
+            participant, _ = Participant.objects.get_or_create(
+                guest_user=user, room=room
+            )
+
+        # Performing this query separately so that the get_or_create does not fail
+        participant.avatar_style = data["player"]["avatarStyle"]
+        participant.avatar_seed = data["player"]["avatarSeed"]
+        participant.save()
+
         # Construct the response data for the participant
         response_data = {
-            "userId": user.id,
-            "username": user.username,
+            **data,
             "roomId": room.room_id,
-            "roomCode": room.room_code,
-            "role": "participant",
-            "ws": f"/rooms/{room_code}",
+            "role": "participant" if request.user == room.host else "host",
+            "ws": f"/rooms/{room.room_code}",
         }
 
         return Response(response_data, status=status.HTTP_200_OK)
@@ -156,3 +157,16 @@ class EndRoomView(APIView):
         room.updated_at = timezone.now()
         room.save()
         return Response({"status": "room_closed"}, status=status.HTTP_200_OK)
+
+
+class CheckRoomValidView(APIView):
+    def post(self, request, *args, **kwargs):
+        room_code = request.data.get("roomCode")
+        try:
+            room = Room.objects.get(room_code=room_code)
+        except Room.DoesNotExist:
+            return Response(
+                {"valid": False},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response({"valid": True}, status=status.HTTP_200_OK)

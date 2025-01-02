@@ -204,6 +204,8 @@ class Participant(models.Model):
     skipped_questions = models.IntegerField(default=0)
     score = models.IntegerField(default=0)
     status = models.CharField(max_length=10, default="waiting", choices=STATUS_CHOICES)
+    avatar_style = models.CharField(max_length=50, default="Circle")
+    avatar_seed = models.CharField(max_length=50, default="")
 
     def __str__(self):
         username = self.user.username if self.user else self.guest_user.username

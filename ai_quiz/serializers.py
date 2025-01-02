@@ -31,9 +31,15 @@ class CreateRoomResponseSerializer(serializers.Serializer):
     ws = serializers.CharField(max_length=1024)
 
 
+class PlayerSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=100)
+    avatarStyle = serializers.CharField(max_length=100)
+    avatarSeed = serializers.CharField(max_length=100)
+
+
 class JoinRoomRequestSerializer(serializers.Serializer):
     roomCode = serializers.CharField(max_length=8)
-    username = serializers.CharField(max_length=100)
+    player = PlayerSerializer(many=False)
 
 
 class JoinRoomResponseSerializer(serializers.Serializer):
