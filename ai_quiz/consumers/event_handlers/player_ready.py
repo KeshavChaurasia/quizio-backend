@@ -18,8 +18,6 @@ class PlayerReadyEventHandler(BaseEventHandler):
     event_type: str = "player_ready"
 
     async def handle(self, event: dict, consumer: "RoomConsumer"):
-        # TODO: Add a check to see if the game has started. If yes, refuse to let the player get ready
-        # TODO: Convert the username from string to a json input->player: {username, avatar_style, avatar_seed}
         username = event.get("payload", {}).get("username")
         if username is None:
             await consumer.send_error("username is required")

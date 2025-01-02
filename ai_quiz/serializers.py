@@ -10,7 +10,7 @@ class ErrorSerializer(serializers.Serializer):
 class QuestionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Question
-        fields = ["question", "options", "timer", "id"]
+        fields = ["question", "options", "time_per_question", "id"]
 
 
 class CreateRoomRequestSerializer(serializers.Serializer):
@@ -89,14 +89,14 @@ class QuestionsRequestSerializer(serializers.Serializer):
     subtopics = serializers.ListField(child=serializers.CharField(max_length=100))
     n = serializers.IntegerField()
     difficulty = serializers.CharField(max_length=10)
-    timer = serializers.IntegerField()
+    timePerQuestion = serializers.IntegerField()
 
 
 class SingleQuestionsResponseSerializer(serializers.Serializer):
     questionId = serializers.CharField(max_length=100, source="id")
     question = serializers.CharField(max_length=1024)
     options = serializers.ListField(child=serializers.CharField(max_length=1024))
-    timer = serializers.IntegerField()
+    timePerQuestion = serializers.IntegerField()
 
 
 class QuestionsResponseSerializer(serializers.ListSerializer):

@@ -23,6 +23,7 @@ class KickPlayerEventHandler(BaseEventHandler):
             await consumer.send_error("Invalid token.")
             return
         username = event.get("payload", {}).get("username")
+
         await consumer.disconnect_user(username)
         await consumer.send_all_player_names()
         await consumer.send_data_to_room(
