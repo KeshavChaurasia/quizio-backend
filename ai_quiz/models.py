@@ -265,7 +265,7 @@ class Participant(models.Model):
                 "avatarStyle": p.avatar_style,
                 "avatarSeed": p.avatar_seed,
                 "status": p.status,
-                "role": "host" if await p.aget_host() == p.user else "player",
+                "role": "host" if await p.aget_host() == p.user else "participant",
             }
             async for p in Participant.objects.filter(
                 room__room_code=room_code, *args, **additional_filters

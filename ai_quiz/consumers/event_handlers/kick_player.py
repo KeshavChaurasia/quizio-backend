@@ -25,3 +25,6 @@ class KickPlayerEventHandler(BaseEventHandler):
         username = event.get("payload", {}).get("username")
         await consumer.disconnect_user(username)
         await consumer.send_all_player_names()
+        await consumer.send_data_to_room(
+            {"type": "player_kicked", "payload": {"username": username}}
+        )
