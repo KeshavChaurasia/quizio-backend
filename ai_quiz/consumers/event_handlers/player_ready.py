@@ -36,6 +36,15 @@ class PlayerReadyEventHandler(BaseEventHandler):
         if participant:
             logger.debug(f"Player {username} is ready")
             await consumer.send_data_to_room(
-                {"type": self.event_type, "payload": {"username": username}}
+                {
+                    "type": self.event_type,
+                    "payload": {
+                        "player": {
+                            "username": participant.participant_username,
+                            "avatarStyle": participant.avatar_style,
+                            "avatarSeed": participant.avatar_seed,
+                        }
+                    },
+                }
             )
         await consumer.send_all_player_names()

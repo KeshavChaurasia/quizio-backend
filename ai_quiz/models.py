@@ -7,7 +7,6 @@ from django.contrib.auth import get_user_model
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
-
 from users.models import GuestUser
 
 User = get_user_model()
@@ -204,8 +203,8 @@ class Participant(models.Model):
     skipped_questions = models.IntegerField(default=0)
     score = models.IntegerField(default=0)
     status = models.CharField(max_length=10, default="waiting", choices=STATUS_CHOICES)
-    avatar_style = models.CharField(max_length=50, default="Circle")
-    avatar_seed = models.CharField(max_length=50, default="")
+    avatar_style = models.CharField(max_length=50, null=True, blank=True, default=None)
+    avatar_seed = models.CharField(max_length=50, null=True, blank=True, default=None)
 
     def __str__(self):
         username = self.user.username if self.user else self.guest_user.username
@@ -253,9 +252,17 @@ class Participant(models.Model):
     async def aget_all_participants_from_room(
         room_code: str, *args, **additional_filters
     ):
-        return await database_sync_to_async(Participant.get_all_participants_from_room)(
-            room_code, *args, **additional_filters
-        )
+        return [
+            {
+                "username": await p.aparticipant_username,
+                "avatar_style": p.avatar_style,
+                "avatar_seed": p.avatar_seed,
+                "status": p.status,
+            }
+            async for p in Participant.objects.filter(
+                room__room_code=room_code, *args, **additional_filters
+            )
+        ]
 
     @property
     def participant_username(self):
