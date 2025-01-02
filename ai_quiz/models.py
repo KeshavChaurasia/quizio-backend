@@ -7,6 +7,8 @@ from django.contrib.auth import get_user_model
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
+from django.utils.timezone import now
+
 from users.models import GuestUser
 
 User = get_user_model()
@@ -133,6 +135,8 @@ class Game(models.Model):
             return None
         if self.current_question < len_questions:
             new_question = questions[self.current_question]
+            new_question.updated_at = now()
+            new_question.save()
             self.current_question += 1
             if self.current_question == len_questions:
                 is_last_question = True

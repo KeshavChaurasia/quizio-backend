@@ -1,3 +1,4 @@
+import logging
 from typing import TYPE_CHECKING
 
 from ai_quiz.models import Game, Leaderboard, Participant, Question
@@ -6,6 +7,8 @@ from .base import BaseEventHandler
 
 if TYPE_CHECKING:
     from ai_quiz.consumers.consumers import RoomConsumer
+
+logger = logging.getLogger(__name__)
 
 
 class QuestionAnsweredEventHandler(BaseEventHandler):
@@ -36,9 +39,15 @@ class QuestionAnsweredEventHandler(BaseEventHandler):
             )
         elif current_question.correct_answer == answer:
             user_data["correct_answers"] = user_data.get("correct_answers", 0) + 1
-            response_time = max(0, timestamp - current_question.updated_at.timestamp())
-            user_data["score"] = user_data.get("score", 0) + max(
-                0, 100 * (1 - (response_time / current_question.time_per_question))
+            logger.info("I am here......")
+            logger.info(f"{timestamp} - {current_question.updated_at.timestamp()}")
+            response_time = max(
+                0, timestamp / 1000 - current_question.updated_at.timestamp()
+            )
+            logger.info("Response time: %s", response_time)
+
+            user_data["score"] = user_data.get("score", 0) + int(
+                max(0, 100 * (1 - (response_time / current_question.time_per_question)))
             )
             await consumer.send_data_to_user(
                 {
