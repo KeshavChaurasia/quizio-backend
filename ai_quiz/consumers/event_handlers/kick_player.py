@@ -23,7 +23,10 @@ class KickPlayerEventHandler(BaseEventHandler):
             await consumer.send_error("Invalid token.")
             return
         username = event.get("payload", {}).get("username")
-
+        if username == user.username:
+            logger.info("User tried to kick themselves.")
+            await consumer.send_error("You can't kick yourself.")
+            return
         await consumer.disconnect_user(username)
         await consumer.send_all_player_names()
         await consumer.send_data_to_room(
