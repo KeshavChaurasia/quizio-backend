@@ -14,15 +14,15 @@ class QuestionAnsweredEventHandler(BaseEventHandler):
     # TODO: Send all_players_answered event to the host
     async def _handle_leaderboard_update(
         self,
-        participant: Participant,
         answer: str,
         consumer: "RoomConsumer",
         current_question: Question,
         leaderboard: Leaderboard,
     ):
         username = consumer.username
+        user_data = leaderboard.data.get(username)
         if not answer:
-            participant.skipped_questions += 1
+            user_data["skipped_questions"] = user_data["skipped_questions"] + 1
             await consumer.send_data_to_user(
                 {
                     "type": "answer_validation",
@@ -34,10 +34,8 @@ class QuestionAnsweredEventHandler(BaseEventHandler):
                 }
             )
         elif current_question.correct_answer == answer:
-            # TODO: Separate out the participant correct answers and wrong answers variables to leaderboard
-            participant.correct_answers += 1
-            participant.score += 1  # TODO: Update the score based on the timestamp
-            leaderboard.data[username] = participant.score
+            user_data["correct_answers"] = user_data.get("correct_answers", 0) + 1
+            user_data["score"] = user_data.get("score", 0) + 1
 
             await consumer.send_data_to_user(
                 {
@@ -50,7 +48,7 @@ class QuestionAnsweredEventHandler(BaseEventHandler):
                 }
             )
         else:
-            participant.wrong_answers += 1
+            user_data["wrong_answers"] = user_data.get("wrong_answers", 0) + 1
             await consumer.send_data_to_user(
                 {
                     "type": "answer_validation",
@@ -61,11 +59,9 @@ class QuestionAnsweredEventHandler(BaseEventHandler):
                     },
                 }
             )
-        await participant.asave()
         await leaderboard.asave()
         # TODO: Handle the case where the user leaves the room in the middle; we need to clear
         # the leaderboard and remove the participant
-        print(leaderboard.data.keys())
 
     async def handle(self, data, consumer: "RoomConsumer"):
         # TODO: Currently, the frontend can send many answers for the same question. We need to handle this.
@@ -98,7 +94,6 @@ class QuestionAnsweredEventHandler(BaseEventHandler):
         leaderboard, _ = await Leaderboard.objects.aget_or_create(game=game)
 
         await self._handle_leaderboard_update(
-            participant=participant,
             answer=answer,
             consumer=consumer,
             current_question=current_question,
@@ -109,8 +104,8 @@ class QuestionAnsweredEventHandler(BaseEventHandler):
             {
                 "type": "leaderboard_update",
                 "payload": [
-                    {"username": d, "score": leaderboard.data[d]}
-                    for d in leaderboard.data
+                    {"username": username, "score": leaderboard.data[username]}
+                    for username in leaderboard.data
                 ],
             }
         )

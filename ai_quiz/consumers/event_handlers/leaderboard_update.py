@@ -20,8 +20,8 @@ class LeaderboardUpdateEventHandler(BaseEventHandler):
             {
                 "type": "leaderboard_update",
                 "payload": [
-                    {"username": d, "score": leaderboard.data[d]}
-                    for d in leaderboard.data
+                    {"username": username, **value}
+                    for username, value in leaderboard.data.items()
                 ],
             }
         )

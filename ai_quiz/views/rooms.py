@@ -124,7 +124,6 @@ class JoinRoomView(APIView):
             participant, _ = Participant.objects.get_or_create(
                 guest_user=user, room=room
             )
-
         # Performing this query separately so that the get_or_create does not fail
         participant.avatar_style = data["player"]["avatarStyle"]
         participant.avatar_seed = data["player"]["avatarSeed"]

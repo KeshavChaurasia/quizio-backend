@@ -109,20 +109,19 @@ class Game(models.Model):
     def __str__(self):
         return f"{self.id}-{self.status}"
 
-    def _reset_all_participant_scores(self):
-        participants = self.room.participants.all()
-        for p in participants:
-            p.score = 0
-            p.correct_answers = 0
-            p.wrong_answers = 0
-            p.skipped_questions = 0
-            p.status = "waiting"
-            p.save()
-        return participants
-
     def create_leaderboard(self):
-        participants = self._reset_all_participant_scores()
-        leaderboard_data = {p.participant_username: p.score for p in participants}
+        participants = self.room.participants.all()
+        leaderboard_data = {
+            p.participant_username: {
+                "avatarStyle": p.avatar_style,
+                "avatarSeed": p.avatar_seed,
+                "score": 0,
+                "correctAnswers": 0,
+                "wrongAnswers": 0,
+                "skippedAnswers": 0,
+            }
+            for p in participants
+        }
         leaderboard = Leaderboard.objects.create(game=self, data=leaderboard_data)
         return leaderboard
 
@@ -197,10 +196,6 @@ class Participant(models.Model):
         null=True,
         blank=True,
     )
-    correct_answers = models.IntegerField(default=0)
-    wrong_answers = models.IntegerField(default=0)
-    skipped_questions = models.IntegerField(default=0)
-    score = models.IntegerField(default=0)
     status = models.CharField(max_length=10, default="waiting", choices=STATUS_CHOICES)
     avatar_style = models.CharField(max_length=50, null=True, blank=True, default=None)
     avatar_seed = models.CharField(max_length=50, null=True, blank=True, default=None)
