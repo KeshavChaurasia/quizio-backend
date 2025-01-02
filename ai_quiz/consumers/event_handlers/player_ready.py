@@ -40,7 +40,7 @@ class PlayerReadyEventHandler(BaseEventHandler):
                     "type": self.event_type,
                     "payload": {
                         "player": {
-                            "username": participant.participant_username,
+                            "username": await participant.aparticipant_username,
                             "avatarStyle": participant.avatar_style,
                             "avatarSeed": participant.avatar_seed,
                         }

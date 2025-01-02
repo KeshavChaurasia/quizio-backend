@@ -11,6 +11,7 @@ from ai_quiz.consumers.event_handlers import (
     PlayerWaitingEventHandler,
     QuestionAnsweredEventHandler,
     HostEndingGameEventHandler,
+    KickPlayerEventHandler,
 )
 from ai_quiz.models import Participant, Room
 
@@ -23,13 +24,13 @@ class RoomConsumer(AsyncWebsocketConsumer):
         # The event names that the backend sends are in the respective classes
         "player_ready": PlayerReadyEventHandler(),
         "player_waiting": PlayerWaitingEventHandler(),
+        "kick_player": KickPlayerEventHandler(),
         "send_next_question": NextQuestionEventHandler(),
         "send_question_answered": QuestionAnsweredEventHandler(),
         "send_leaderboard_update": LeaderboardUpdateEventHandler(),
         "send_all_players": PlayerListEventHandler(),
         "send_host_starting_game": HostStartingGameEventHandler(),
         "send_host_ending_game": HostEndingGameEventHandler(),
-        # TODO: Add player kick event
     }
 
     @property
@@ -50,31 +51,31 @@ class RoomConsumer(AsyncWebsocketConsumer):
         await self.accept()
         logger.info(f"Connection established for {self.channel_name}")
 
+    async def disconnect_user(self, username):
+        await self.send_data_to_room(
+            {
+                "type": "player_disconnected",
+                "payload": {"username": username},
+            }
+        )
+        participant = await Participant.aget_participant_by_username(
+            username=username, room__room_code=self.room_code
+        )
+        logger.debug(f"username: {username}, room_code: {self.room_code}")
+        if participant is None:
+            logger.debug(f"Participant not found: {username} while disconnecting.")
+        else:
+            room = await Room.objects.aget(room_code=self.room_code)
+            participant_username = await participant.aparticipant_username
+            host_username = await room.ahost_name
+            if participant_username == host_username:
+                await self.send_data_to_room({"type": "host_ended_game", "payload": {}})
+            await participant.adelete()
+        await self.send_all_player_names()
+
     async def disconnect(self, close_code):
         if self.username:
-            await self.send_data_to_room(
-                {
-                    "type": "player_disconnected",
-                    "payload": {"username": self.username},
-                }
-            )
-            participant = await Participant.aget_participant_by_username(
-                username=self.username, room__room_code=self.room_code
-            )
-            if participant is None:
-                logger.debug(
-                    f"Participant not found: {self.username} while disconnecting."
-                )
-            else:
-                room = await Room.objects.aget(room_code=self.room_code)
-                participant_username = await participant.aparticipant_username
-                host_username = await room.ahost_name
-                if participant_username == host_username:
-                    await self.send_data_to_room(
-                        {"type": "host_ended_game", "payload": {}}
-                    )
-                await participant.adelete()
-            await self.send_all_player_names()
+            await self.disconnect_user(self.username)
         await self.channel_layer.group_discard(self.room_code, self.channel_name)
 
     async def receive(self, text_data):

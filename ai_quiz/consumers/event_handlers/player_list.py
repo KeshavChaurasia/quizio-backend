@@ -1,6 +1,5 @@
 from typing import TYPE_CHECKING
 
-from ai_quiz.models import Participant
 
 from .base import BaseEventHandler
 

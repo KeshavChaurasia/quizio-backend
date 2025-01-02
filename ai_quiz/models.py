@@ -210,6 +210,13 @@ class Participant(models.Model):
         username = self.user.username if self.user else self.guest_user.username
         return f"{username}:{self.room.room_code}"
 
+    def get_host(self):
+        return self.room.host
+
+    @database_sync_to_async
+    def aget_host(self):
+        return self.room.host
+
     @staticmethod
     def get_participant_by_username(username, **additional_filters):
         try:
@@ -258,6 +265,7 @@ class Participant(models.Model):
                 "avatarStyle": p.avatar_style,
                 "avatarSeed": p.avatar_seed,
                 "status": p.status,
+                "role": "host" if await p.aget_host() == p.user else "player",
             }
             async for p in Participant.objects.filter(
                 room__room_code=room_code, *args, **additional_filters

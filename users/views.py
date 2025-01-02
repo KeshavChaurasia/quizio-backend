@@ -1,5 +1,4 @@
 from django.contrib.auth import get_user_model, update_session_auth_hash
-from django.contrib.auth.hashers import make_password
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.core.mail import send_mail
 from django.utils.encoding import force_bytes
