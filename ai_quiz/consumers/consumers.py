@@ -1,17 +1,20 @@
 import json
 import logging
+
 from channels.generic.websocket import AsyncWebsocketConsumer
+from django.core.cache import cache
 from django.db.models import Q
+
 from ai_quiz.consumers.event_handlers import (
+    HostEndingGameEventHandler,
     HostStartingGameEventHandler,
+    KickPlayerEventHandler,
     LeaderboardUpdateEventHandler,
     NextQuestionEventHandler,
     PlayerListEventHandler,
     PlayerReadyEventHandler,
     PlayerWaitingEventHandler,
     QuestionAnsweredEventHandler,
-    HostEndingGameEventHandler,
-    KickPlayerEventHandler,
 )
 from ai_quiz.models import Participant, Room
 
@@ -71,12 +74,16 @@ class RoomConsumer(AsyncWebsocketConsumer):
             if participant_username == host_username:
                 await self.send_data_to_room({"type": "host_ended_game", "payload": {}})
             await participant.adelete()
+            cache.delete(f"user_channel_{self.username}")
         await self.send_all_player_names()
 
     async def disconnect(self, close_code):
         if self.username:
             await self.disconnect_user(self.username)
-        await self.channel_layer.group_discard(self.room_code, self.channel_name)
+        await self.disconnect_channel(self.channel_name)
+
+    async def disconnect_channel(self, channel_name):
+        await self.channel_layer.group_discard(self.room_code, channel_name)
 
     async def receive(self, text_data):
         data = json.loads(text_data)

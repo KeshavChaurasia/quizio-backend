@@ -8,9 +8,11 @@ class ErrorSerializer(serializers.Serializer):
 
 
 class QuestionSerializer(serializers.ModelSerializer):
+    timePerQuestion = serializers.IntegerField(source="time_per_question")
+
     class Meta:
         model = Question
-        fields = ["question", "options", "time_per_question", "id"]
+        fields = ["question", "options", "timePerQuestion", "id"]
 
 
 class CreateRoomRequestSerializer(serializers.Serializer):

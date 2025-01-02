@@ -1,5 +1,6 @@
 import logging
 from typing import TYPE_CHECKING
+from django.core.cache import cache  # Using Redis as a cache
 
 from users.authenticators import aget_authenticated_user
 
@@ -28,6 +29,8 @@ class KickPlayerEventHandler(BaseEventHandler):
             await consumer.send_error("You can't kick yourself.")
             return
         await consumer.disconnect_user(username)
+        channel_name = await cache.aget(f"user_channel_{username}")
+        await consumer.disconnect_channel(str(channel_name))
         await consumer.send_all_player_names()
         await consumer.send_data_to_room(
             {"type": "player_kicked", "payload": {"username": username}}

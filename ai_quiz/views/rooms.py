@@ -65,7 +65,7 @@ class CreateRoomView(APIView):
             )
             participant.status = "ready"
             participant.save()
-
+            room.end_all_games()
             return self._get_response(room, user)
         # Create a new room for the host
         room = Room.objects.create(host=user, status="waiting")

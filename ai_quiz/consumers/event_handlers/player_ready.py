@@ -1,11 +1,12 @@
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+from django.core.cache import cache  # Using Redis as a cache
 
 from ai_quiz.models import Game, Participant
 
 from .base import BaseEventHandler
-
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ai_quiz.consumers.consumers import RoomConsumer
@@ -27,6 +28,7 @@ class PlayerReadyEventHandler(BaseEventHandler):
             return
 
         consumer.username = username
+        await cache.aset(f"user_channel_{username}", consumer.channel_name)
         game = await Game.aget_current_game_for_room(consumer.room_code)
         if game and game.status == "in_progress":
             await consumer.send_error("Game has already started")
