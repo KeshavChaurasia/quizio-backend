@@ -41,7 +41,8 @@ class User(AbstractUser):
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     bio = models.TextField(blank=True, null=True)
-    avatar = models.URLField(max_length=500, blank=True, null=True)
+    avatar_style = models.CharField(max_length=255, blank=True, null=True)
+    avatar_seed = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
         return f"{self.user.username}'s profile"

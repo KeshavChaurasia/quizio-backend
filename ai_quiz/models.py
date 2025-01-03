@@ -115,8 +115,8 @@ class Game(models.Model):
         participants = self.room.participants.all()
         leaderboard_data = {
             p.participant_username: {
-                "avatarStyle": p.avatar_style,
-                "avatarSeed": p.avatar_seed,
+                "avatarStyle": p.avatar_style or p.user.profile.avatar_style,
+                "avatarSeed": p.avatar_seed or p.user.profile.avatar_seed,
                 "score": 0,
                 "correctAnswers": 0,
                 "wrongAnswers": 0,

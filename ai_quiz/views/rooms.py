@@ -64,13 +64,21 @@ class CreateRoomView(APIView):
                 user=request.user, room=room
             )
             participant.status = "ready"
+            participant.avatar_style = user.profile.avatar_style
+            participant.avatar_seed = user.profile.avatar_seed
             participant.save()
             room.end_all_games()
             return self._get_response(room, user)
         # Create a new room for the host
         room = Room.objects.create(host=user, status="waiting")
 
-        Participant.objects.create(user=request.user, room=room, status="ready")
+        Participant.objects.create(
+            user=request.user,
+            room=room,
+            status="ready",
+            avatar_style=user.profile.avatar_style,
+            avatar_seed=user.profile.avatar_seed,
+        )
         return self._get_response(room, user, created=True)
 
 
@@ -95,7 +103,8 @@ class JoinRoomView(APIView):
         # Check if the room exists
         try:
             room = Room.objects.get(
-                Q(status="active") | Q(status="waiting"), room_code=data["roomCode"]
+                Q(status="active") | Q(status="waiting"),
+                room_code=data["roomCode"],
             )
         except Room.DoesNotExist:
             return Response(
@@ -120,14 +129,16 @@ class JoinRoomView(APIView):
         # Create a participant object for the user
         if isinstance(user, User):
             participant, _ = Participant.objects.get_or_create(user=user, room=room)
+            participant.avatar_style = user.profile.avatar_style
+            participant.avatar_seed = user.profile.avatar_seed
+            participant.save()
         else:
             participant, _ = Participant.objects.get_or_create(
                 guest_user=user, room=room
             )
-        # Performing this query separately so that the get_or_create does not fail
-        participant.avatar_style = data["player"]["avatarStyle"]
-        participant.avatar_seed = data["player"]["avatarSeed"]
-        participant.save()
+            participant.avatar_style = data["player"]["avatarStyle"]
+            participant.avatar_seed = data["player"]["avatarSeed"]
+            participant.save()
 
         # Construct the response data for the participant
         response_data = {
