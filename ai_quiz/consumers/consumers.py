@@ -29,7 +29,7 @@ class RoomConsumer(AsyncWebsocketConsumer):
         "player_ready": PlayerReadyEventHandler(),
         "player_waiting": PlayerWaitingEventHandler(),
         "kick_player": KickPlayerEventHandler(),
-        "player_message": PlayerMessageEventHandler(),
+        "send_player_message": PlayerMessageEventHandler(),
         "send_next_question": NextQuestionEventHandler(),
         "send_question_answered": QuestionAnsweredEventHandler(),
         "send_leaderboard_update": LeaderboardUpdateEventHandler(),

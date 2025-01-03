@@ -7,13 +7,15 @@ if TYPE_CHECKING:
 
 
 class PlayerMessageEventHandler(BaseEventHandler):
+    event_type: str = "player_message"
+
     async def handle(self, event, consumer: "RoomConsumer"):
         payload = event.get("payload", {})
         message = payload.get("message")
         username = payload.get("username")
         await consumer.send_data_to_room(
             {
-                "type": "player_message",
+                "type": self.event_type,
                 "payload": {"message": message, "username": username},
             }
         )
