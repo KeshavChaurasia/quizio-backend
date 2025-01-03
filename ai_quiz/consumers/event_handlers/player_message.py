@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from ai_quiz.models import Participant
+from ai_quiz.models import Game, GameMessage, Participant
 
 from .base import BaseEventHandler
 
@@ -21,11 +21,22 @@ class PlayerMessageEventHandler(BaseEventHandler):
         if participant is None:
             await consumer.send_error(f"Participant not found for username: {username}")
             return
+        game = await Game.aget_current_game_for_room(consumer.room_code)
+        if game is None:
+            await consumer.send_error("No game found for room")
+            return
+        game_message: GameMessage = await GameMessage.objects.acreate(
+            participant=participant,
+            message=message,
+            game=game,
+        )
         await consumer.send_data_to_room(
             {
                 "type": self.event_type,
                 "payload": {
                     "message": message,
+                    "id": game_message.id,
+                    "timestamp": game_message.created_at.timestamp(),
                     "player": {
                         "username": username,
                         "avatarStyle": participant.avatar_style,

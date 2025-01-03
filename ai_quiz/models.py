@@ -280,6 +280,20 @@ class Participant(models.Model):
         return self.user.username if self.user else self.guest_user.username
 
 
+class GameMessage(models.Model):
+    game = models.ForeignKey(
+        Game, on_delete=models.CASCADE, related_name="chat_messages"
+    )
+    participant = models.ForeignKey(
+        Participant, on_delete=models.CASCADE, related_name="chat_messages"
+    )
+    message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.id
+
+
 class Leaderboard(models.Model):
     game = models.OneToOneField(
         Game, on_delete=models.CASCADE, related_name="leaderboard"
