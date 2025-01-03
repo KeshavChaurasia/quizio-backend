@@ -26,7 +26,7 @@ class QuestionAnsweredEventHandler(BaseEventHandler):
         username = consumer.username
         user_data = leaderboard.data.get(username)
         if not answer:
-            user_data["skipped_questions"] = user_data("skipped_questions", 0) + 1
+            user_data["skipped_questions"] = user_data.get("skipped_questions", 0) + 1
             await consumer.send_data_to_user(
                 {
                     "type": "answer_validation",
