@@ -1,6 +1,9 @@
 import logging
 from typing import TYPE_CHECKING
 
+from ai_quiz.consumers.event_handlers.leaderboard_update import (
+    LeaderboardUpdateEventHandler,
+)
 from ai_quiz.models import Game, Leaderboard, Participant, Question
 
 from .base import BaseEventHandler
@@ -14,6 +17,24 @@ logger = logging.getLogger(__name__)
 class QuestionAnsweredEventHandler(BaseEventHandler):
     event_type: str = "question_answered"
 
+    async def send_answer_validation_event(
+        self,
+        consumer: "RoomConsumer",
+        answer: str,
+        correct_answer: str,
+        is_correct: bool,
+    ):
+        return await consumer.send_data_to_user(
+            {
+                "type": "answer_validation",
+                "payload": {
+                    "isCorrect": is_correct,
+                    "correctAnswer": correct_answer,
+                    "submittedAnswer": answer,
+                },
+            }
+        )
+
     # TODO: Send all_players_answered event to the host
     async def _handle_leaderboard_update(
         self,
@@ -25,55 +46,38 @@ class QuestionAnsweredEventHandler(BaseEventHandler):
     ):
         username = consumer.username
         user_data = leaderboard.data.get(username)
+        is_correct = False
+
         if not answer:
+            # User skipped the question means the answer field will be null
             user_data["skipped_questions"] = user_data.get("skipped_questions", 0) + 1
-            await consumer.send_data_to_user(
-                {
-                    "type": "answer_validation",
-                    "payload": {
-                        "submittedAnswer": answer,
-                        "isCorrect": False,
-                        "correctAnswer": current_question.correct_answer,
-                    },
-                }
-            )
         elif current_question.correct_answer == answer:
+            # User answered correctly
             user_data["correct_answers"] = user_data.get("correct_answers", 0) + 1
-            logger.info("I am here......")
-            logger.info(f"{timestamp} - {current_question.updated_at.timestamp()}")
+            # Calculate score based on timestamp
             response_time = max(
                 0, timestamp / 1000 - current_question.updated_at.timestamp()
             )
-            logger.info("Response time: %s", response_time)
 
             user_data["score"] = user_data.get("score", 0) + int(
-                max(0, 100 * (1 - (response_time / current_question.time_per_question)))
+                max(
+                    0,  # Min score
+                    100  # Max score
+                    * (1 - (response_time / current_question.time_per_question)),
+                )
             )
-            await consumer.send_data_to_user(
-                {
-                    "type": "answer_validation",
-                    "payload": {
-                        "submittedAnswer": answer,
-                        "isCorrect": True,
-                        "correctAnswer": current_question.correct_answer,
-                    },
-                }
-            )
+            # IMPORTANT: Set is_correct to True
+            is_correct = True
         else:
+            # User answered incorrectly
             user_data["wrong_answers"] = user_data.get("wrong_answers", 0) + 1
-            await consumer.send_data_to_user(
-                {
-                    "type": "answer_validation",
-                    "payload": {
-                        "submittedAnswer": answer,
-                        "isCorrect": False,
-                        "correctAnswer": current_question.correct_answer,
-                    },
-                }
-            )
         await leaderboard.asave()
-        # TODO: Handle the case where the user leaves the room in the middle; we need to clear
-        # the leaderboard and remove the participant
+        await self.send_answer_validation_event(
+            consumer=consumer,
+            answer=answer,
+            correct_answer=current_question.correct_answer,
+            is_correct=is_correct,
+        )
 
     async def handle(self, data, consumer: "RoomConsumer"):
         username = consumer.username
@@ -116,12 +120,6 @@ class QuestionAnsweredEventHandler(BaseEventHandler):
             timestamp=timestamp,
         )
 
-        await consumer.send_data_to_room(
-            {
-                "type": "leaderboard_update",
-                "payload": [
-                    {"username": username, **value}
-                    for username, value in leaderboard.data.items()
-                ],
-            }
+        await LeaderboardUpdateEventHandler().send_leaderboard_update(
+            leaderboard=leaderboard, consumer=consumer
         )
