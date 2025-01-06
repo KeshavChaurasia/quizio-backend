@@ -35,9 +35,22 @@ class QuestionAnsweredEventHandler(BaseEventHandler):
             }
         )
 
-    # TODO: Send all_players_answered event to the host
+    async def send_all_players_answered(
+        self, consumer: "RoomConsumer", leaderboard: Leaderboard, question_id: str
+    ):
+        all_players_answered = all(
+            question_id in data.get("answered_questions", [])
+            for data in leaderboard.data.values()
+        )
+
+        if all_players_answered:
+            await consumer.send_data_to_room(
+                {"type": "all_players_answered", "payload": {}}
+            )
+
     async def _handle_leaderboard_update(
         self,
+        question_id: str,
         answer: str,
         consumer: "RoomConsumer",
         current_question: Question,
@@ -47,7 +60,9 @@ class QuestionAnsweredEventHandler(BaseEventHandler):
         username = consumer.username
         user_data = leaderboard.data.get(username)
         is_correct = False
-
+        user_data["answered_questions"] = user_data.get("answered_questions", []) + [
+            question_id
+        ]
         if not answer:
             # User skipped the question means the answer field will be null
             user_data["skipped_questions"] = user_data.get("skipped_questions", 0) + 1
@@ -77,6 +92,9 @@ class QuestionAnsweredEventHandler(BaseEventHandler):
             answer=answer,
             correct_answer=current_question.correct_answer,
             is_correct=is_correct,
+        )
+        await self.send_all_players_answered(
+            consumer=consumer, leaderboard=leaderboard, question_id=question_id
         )
 
     async def handle(self, data, consumer: "RoomConsumer"):
@@ -113,6 +131,7 @@ class QuestionAnsweredEventHandler(BaseEventHandler):
         leaderboard, _ = await Leaderboard.objects.aget_or_create(game=game)
 
         await self._handle_leaderboard_update(
+            question_id=question_id,
             answer=answer,
             consumer=consumer,
             current_question=current_question,

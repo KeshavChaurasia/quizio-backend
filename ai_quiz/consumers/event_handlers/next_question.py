@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from ai_quiz.models import Game, Question
+from ai_quiz.models import Game
 from ai_quiz.serializers import QuestionSerializer
 from users.authenticators import aget_authenticated_user
 
