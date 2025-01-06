@@ -156,7 +156,6 @@ class StartGameView(APIView):
                 )
 
             game: Game = room.get_current_game()
-            # TODO: Think if I need to create the leaderboard here instead
             game.status = "in_progress"
             game.save()
             room.status = "active"

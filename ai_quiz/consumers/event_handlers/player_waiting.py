@@ -14,7 +14,6 @@ class PlayerWaitingEventHandler(BaseEventHandler):
     async def handle(self, event: dict, consumer: "RoomConsumer"):
         # If player is waiting, update the status in the database
         # and broadcast a message to all the users in the room using event type "player_waiting"
-        # TODO: Add a check to see if the game has started. If yes, refuse to let the player wait
         username = consumer.username
         if not username:
             await consumer.send_error("You need to be ready to wait.")

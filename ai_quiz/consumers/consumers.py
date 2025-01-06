@@ -92,9 +92,6 @@ class RoomConsumer(AsyncWebsocketConsumer):
         event_type = data["type"]
         logger.info(f"Received event: {event_type}")
         try:
-            # TODO: Currently, players who aren't in the current game can also send
-            # events after the game has started. This should be fixed.
-
             # Handle all events here
             await self.event_handlers[event_type].handle(data, self)
         except KeyError:

@@ -53,7 +53,6 @@ class Room(models.Model):
 
     def get_current_game(self):
         try:
-            # TODO: Handle the case where multiple games are found
             waiting_game = self.games.get(Q(status="waiting") | Q(status="in_progress"))
             try:
                 waiting_game.leaderboard
@@ -406,7 +405,7 @@ class SinglePlayerGame(models.Model):
         questions = self.questions.all()
         if self.current_question < len(questions):
             new_question = questions[self.current_question]
-            self.current_question += 1  # TODO: Fix this to 1
+            self.current_question += 1
             self.save()
             return new_question
         self.end_game()
